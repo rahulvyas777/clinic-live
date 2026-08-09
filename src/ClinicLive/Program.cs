@@ -45,6 +45,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 builder.Services.AddScoped<ClinicLive.Services.BookingService>();
+builder.Services.AddScoped<ClinicLive.Services.QueueService>();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -72,6 +74,8 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<ClinicLive.Hubs.QueueHub>("/hubs/queue");
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

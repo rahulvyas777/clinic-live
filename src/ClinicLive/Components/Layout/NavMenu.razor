@@ -30,11 +30,28 @@
             </NavLink>
         </div>
 
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="kiosk">
+                <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Check-in kiosk
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="board">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Waiting room
+            </NavLink>
+        </div>
+
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="staff/appointments">
                         <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Appointments
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="staff/queue">
+                        <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Queue
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">

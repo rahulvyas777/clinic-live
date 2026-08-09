@@ -1,0 +1,94 @@
+@page "/staff/queue"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
+@using ClinicLive.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@inject QueueService QueueSvc
+@inject NavigationManager Navigation
+
+<PageTitle>Queue — ClinicLive</PageTitle>
+
+<h1>Queue</h1>
+
+<div class="row" style="max-width: 50rem;">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Now serving</h5>
+                <p class="fs-3 fw-bold mb-0">@(_snapshot?.NowServing?.DisplayName ?? "—")</p>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-lg" @onclick="CallNextAsync" disabled="@_busy">
+            Call next patient
+        </button>
+        @if (_empty)
+        {
+            <p class="text-muted mt-2">The queue is empty.</p>
+        }
+    </div>
+    <div class="col-md-6">
+        <h5 class="text-muted">Waiting (@(_snapshot?.Waiting.Count ?? 0))</h5>
+        @if (_snapshot is { Waiting.Count: > 0 })
+        {
+            <table class="table table-sm align-middle">
+                <thead><tr><th>#</th><th>Patient</th><th>Slot</th><th>Checked in</th></tr></thead>
+                <tbody>
+                    @{ var n = 0; }
+                    @foreach (var item in _snapshot.Waiting)
+                    {
+                        n++;
+                        <tr>
+                            <td>@n</td>
+                            <td>@item.DisplayName</td>
+                            <td class="font-monospace">@item.SlotAt.ToString("HH:mm")</td>
+                            <td class="font-monospace">@item.CheckedInAt.ToString("HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private QueueSnapshot? _snapshot;
+    private HubConnection? _hub;
+    private bool _busy;
+    private bool _empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _snapshot = await QueueSvc.GetSnapshotAsync();
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/queue"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On("QueueChanged", async () =>
+        {
+            _snapshot = await QueueSvc.GetSnapshotAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await _hub.StartAsync();
+        await _hub.InvokeAsync(nameof(ClinicLive.Hubs.QueueHub.JoinBoard));
+    }
+
+    private async Task CallNextAsync()
+    {
+        _busy = true;
+        var called = await QueueSvc.CallNextAsync();
+        _empty = !called;
+        _busy = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub is not null)
+        {
+            await _hub.DisposeAsync();
+        }
+    }
+}

@@ -1,0 +1,90 @@
+@page "/board"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using ClinicLive.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@inject QueueService Queue
+@inject NavigationManager Navigation
+
+<PageTitle>Waiting room — ClinicLive</PageTitle>
+
+<div class="text-center mt-4">
+    <h1 class="display-6 text-muted">Waiting room</h1>
+
+    @if (_snapshot?.NowServing is { } serving)
+    {
+        <div class="my-5">
+            <div class="text-muted fs-4">Now serving</div>
+            <div class="display-1 fw-bold">@serving.DisplayName</div>
+        </div>
+    }
+    else
+    {
+        <div class="my-5 text-muted fs-3">The next patient will be called shortly…</div>
+    }
+
+    <h2 class="fs-4 text-muted">Up next</h2>
+    @if (_snapshot is null || _snapshot.Waiting.Count == 0)
+    {
+        <p class="text-muted">No one is waiting.</p>
+    }
+    else
+    {
+        <ol class="list-group list-group-numbered mx-auto" style="max-width: 24rem;">
+            @foreach (var item in _snapshot.Waiting)
+            {
+                <li class="list-group-item fs-4">@item.DisplayName</li>
+            }
+        </ol>
+    }
+
+    <p class="mt-4 small @(_connected ? "text-success" : "text-danger")">
+        ● @(_connected ? "live" : "reconnecting…")
+    </p>
+</div>
+
+@code {
+    private QueueSnapshot? _snapshot;
+    private HubConnection? _hub;
+    private bool _connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _snapshot = await Queue.GetSnapshotAsync();
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/queue"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On("QueueChanged", async () =>
+        {
+            _snapshot = await Queue.GetSnapshotAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.Reconnected += async _ =>
+        {
+            await _hub.InvokeAsync(nameof(ClinicLive.Hubs.QueueHub.JoinBoard));
+            _connected = true;
+            await InvokeAsync(StateHasChanged);
+        };
+        _hub.Closed += async _ =>
+        {
+            _connected = false;
+            await InvokeAsync(StateHasChanged);
+        };
+
+        await _hub.StartAsync();
+        await _hub.InvokeAsync(nameof(ClinicLive.Hubs.QueueHub.JoinBoard));
+        _connected = true;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub is not null)
+        {
+            await _hub.DisposeAsync();
+        }
+    }
+}
