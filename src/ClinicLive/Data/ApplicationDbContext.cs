@@ -34,6 +34,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(a => a.StartsAt)
                 .IsUnique()
                 .HasFilter("status NOT IN ('Cancelled', 'NoShow')");
+
+            // Part 11 hardening: the partial index above only covers ACTIVE rows, so
+            // the all-statuses day-range queries (staff pages) get their own index —
+            // EXPLAIN showed a seq scan without it.
+            e.HasIndex(a => a.StartsAt).HasDatabaseName("ix_appointments_starts_at_all");
+
+            // Status is stored as text; the database should refuse values the enum
+            // doesn't have (a raw UPDATE can bypass every C# check).
+            e.ToTable(t => t.HasCheckConstraint("ck_appointments_status",
+                "status IN ('Booked', 'CheckedIn', 'InProgress', 'Done', 'Cancelled', 'NoShow')"));
         });
 
         builder.Entity<QueueEntry>(e =>

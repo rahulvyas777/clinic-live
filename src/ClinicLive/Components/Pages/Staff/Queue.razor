@@ -1,6 +1,6 @@
 @page "/staff/queue"
 @rendermode InteractiveServer
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = ClinicLive.Data.DbSeeder.ReceptionRole)]
 @implements IAsyncDisposable
 @using ClinicLive.Services
 @using Microsoft.AspNetCore.SignalR.Client
