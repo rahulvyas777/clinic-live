@@ -12,17 +12,18 @@ public sealed record QueueSnapshot(QueueItem? NowServing, List<QueueItem> Waitin
 
 public sealed record CheckInResult(bool Success, string? Error = null, int Position = 0);
 
-public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<QueueHub> hub)
+public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<QueueHub> hub, ClinicTime clinic)
 {
     public async Task<CheckInResult> CheckInAsync(string confirmationCode)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
 
-        var dayStart = DateTime.UtcNow.Date;
+        // "Today" is the clinic's day, not the server's (Part 10's timezone fix).
+        var (dayStart, dayEnd) = clinic.DayBoundsUtc(clinic.Today);
         var appointment = await db.Appointments
             .Include(a => a.QueueEntry)
             .FirstOrDefaultAsync(a => a.ConfirmationCode == confirmationCode.Trim().ToUpper()
-                                   && a.StartsAt >= dayStart && a.StartsAt < dayStart.AddDays(1));
+                                   && a.StartsAt >= dayStart && a.StartsAt < dayEnd);
 
         if (appointment is null)
         {
@@ -64,9 +65,12 @@ public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHu
             .Select(ToItem)
             .FirstOrDefault();
 
+        // Spec: slot time first, check-in time as tiebreaker. Checking in early
+        // doesn't let you jump ahead of an earlier appointment (docs/spec.md).
         var waiting = entries
             .Where(q => q.CalledAt == null)
-            .OrderBy(q => q.CheckedInAt)
+            .OrderBy(q => q.Appointment.StartsAt)
+            .ThenBy(q => q.CheckedInAt)
             .Select(ToItem)
             .ToList();
 
@@ -90,7 +94,8 @@ public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHu
         var next = await db.QueueEntries
             .Include(q => q.Appointment)
             .Where(q => q.CalledAt == null && q.Appointment.Status == AppointmentStatus.CheckedIn)
-            .OrderBy(q => q.CheckedInAt)
+            .OrderBy(q => q.Appointment.StartsAt)
+            .ThenBy(q => q.CheckedInAt)
             .FirstOrDefaultAsync();
 
         if (next is null)

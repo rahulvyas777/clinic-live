@@ -7,7 +7,7 @@ namespace ClinicLive.Tests;
 [Collection("postgres")]
 public class BookingServiceTests(PostgresFixture fx)
 {
-    private BookingService NewService() => new(fx.DbFactory);
+    private BookingService NewService() => new(fx.DbFactory, fx.ClinicTime);
 
     private static DateTime Slot(int daysAhead, int hour, int minute) =>
         DateTime.UtcNow.Date.AddDays(daysAhead).AddHours(hour).AddMinutes(minute);
@@ -55,12 +55,12 @@ public class BookingServiceTests(PostgresFixture fx)
 [Collection("postgres")]
 public class QueueServiceTests(PostgresFixture fx)
 {
-    private QueueService NewService() => new(fx.DbFactory, new FakeQueueHub());
+    private QueueService NewService() => new(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime);
 
     [Fact]
     public async Task Check_in_marks_the_appointment_and_joins_the_queue()
     {
-        var booking = await new BookingService(fx.DbFactory)
+        var booking = await new BookingService(fx.DbFactory, fx.ClinicTime)
             .BookAsync("Test Patient F", "+00-1111-0006", null, DateTime.UtcNow.Date.AddHours(14));
 
         var result = await NewService().CheckInAsync(booking.Appointment!.ConfirmationCode);
@@ -75,16 +75,18 @@ public class QueueServiceTests(PostgresFixture fx)
     }
 
     [Fact]
-    public async Task Waiting_list_is_ordered_by_check_in_time()
+    public async Task Waiting_list_is_ordered_by_slot_then_check_in()
     {
-        // NOTE (Part 10 will revisit this test): it asserts what the CODE does today.
-        var booking = new BookingService(fx.DbFactory);
+        // Part 9's version of this test was written FROM THE IMPLEMENTATION and
+        // blessed first-come-first-served. The spec says otherwise (docs/spec.md):
+        // slot time first, check-in as tiebreaker. Tests come from the spec.
+        var booking = new BookingService(fx.DbFactory, fx.ClinicTime);
         var queue = NewService();
 
         var lateSlot = await booking.BookAsync("Test Patient G", "+00-1111-0007", null, DateTime.UtcNow.Date.AddHours(15).AddMinutes(45));
         var earlySlot = await booking.BookAsync("Test Patient H", "+00-1111-0008", null, DateTime.UtcNow.Date.AddHours(15));
 
-        // The late-slot patient checks in FIRST.
+        // The late-slot patient checks in FIRST — and still waits their turn.
         await queue.CheckInAsync(lateSlot.Appointment!.ConfirmationCode);
         await queue.CheckInAsync(earlySlot.Appointment!.ConfirmationCode);
 
@@ -94,6 +96,6 @@ public class QueueServiceTests(PostgresFixture fx)
         var lateIndex = names.IndexOf("Test G.");   // board masks to "First L."
         var earlyIndex = names.IndexOf("Test H.");
         Assert.True(lateIndex >= 0 && earlyIndex >= 0, "both patients should be waiting");
-        Assert.True(lateIndex < earlyIndex, "first to check in is first in the queue");
+        Assert.True(earlyIndex < lateIndex, "the 15:00 appointment is served before the 15:45 one");
     }
 }
