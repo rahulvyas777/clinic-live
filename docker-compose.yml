@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:18
+    container_name: cliniclive-pg
+    environment:
+      POSTGRES_USER: cliniclive
+      POSTGRES_PASSWORD: cliniclive
+      POSTGRES_DB: cliniclive
+    ports:
+      - "5499:5432"
+    volumes:
+      - cliniclive-pgdata:/var/lib/postgresql/data
+
+volumes:
+  cliniclive-pgdata:

@@ -40,8 +40,9 @@ cd src/ClinicLive
 dotnet run
 ```
 
-Then open the printed URL. Seeded staff login: `reception@clinic.live` / `Clinic!Live1`
-(see `docs/seed-data.md`).
+Then open the printed URL. Seeded staff login: `reception@cliniclive.test` / `Clinic!Live1`
+(demo-only credentials — everything in the seeder is fictional; `.test` addresses
+can never exist).
 
 ## Reading the history
 
