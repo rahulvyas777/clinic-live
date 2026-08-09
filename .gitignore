@@ -1,0 +1,5 @@
+.build-log.md
+bin/
+obj/
+*.user
+.vs/
