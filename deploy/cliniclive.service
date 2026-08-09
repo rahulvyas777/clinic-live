@@ -1,0 +1,16 @@
+# /etc/systemd/system/cliniclive.service
+[Unit]
+Description=ClinicLive (Blazor Server)
+After=network.target postgresql.service
+
+[Service]
+WorkingDirectory=/var/www/cliniclive
+ExecStart=/usr/bin/dotnet /var/www/cliniclive/ClinicLive.dll
+Restart=always
+RestartSec=5
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://localhost:5100
+
+[Install]
+WantedBy=multi-user.target
