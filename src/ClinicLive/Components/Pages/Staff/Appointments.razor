@@ -1,0 +1,63 @@
+@page "/staff/appointments"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using ClinicLive.Data
+@using ClinicLive.Domain
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<PageTitle>Today's appointments — ClinicLive</PageTitle>
+
+<h1>Today's appointments</h1>
+
+@if (_appointments is null)
+{
+    <p>Loading…</p>
+}
+else if (_appointments.Count == 0)
+{
+    <p class="text-muted">Nothing booked for today (yet).</p>
+}
+else
+{
+    <table class="table table-striped align-middle" style="max-width: 50rem;">
+        <thead>
+            <tr><th>Time</th><th>Patient</th><th>Phone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var a in _appointments)
+            {
+                <tr>
+                    <td class="font-monospace">@a.StartsAt.ToString("HH:mm")</td>
+                    <td>@a.Patient.FullName</td>
+                    <td>@a.Patient.Phone</td>
+                    <td><span class="badge @BadgeFor(a.Status)">@a.Status</span></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Appointment>? _appointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var dayStart = DateTime.UtcNow.Date;
+        _appointments = await db.Appointments
+            .Include(a => a.Patient)
+            .Where(a => a.StartsAt >= dayStart && a.StartsAt < dayStart.AddDays(1))
+            .OrderBy(a => a.StartsAt)
+            .ToListAsync();
+    }
+
+    private static string BadgeFor(AppointmentStatus status) => status switch
+    {
+        AppointmentStatus.Booked => "text-bg-secondary",
+        AppointmentStatus.CheckedIn => "text-bg-info",
+        AppointmentStatus.InProgress => "text-bg-primary",
+        AppointmentStatus.Done => "text-bg-success",
+        _ => "text-bg-warning",
+    };
+}

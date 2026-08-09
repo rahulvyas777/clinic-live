@@ -1,0 +1,149 @@
+@page "/book"
+@rendermode InteractiveServer
+@using ClinicLive.Services
+@inject BookingService Booking
+
+<PageTitle>Book an appointment — ClinicLive</PageTitle>
+
+<h1>Book an appointment</h1>
+
+@if (_confirmed is not null)
+{
+    <div class="alert alert-success mt-3" role="alert">
+        <h4 class="alert-heading">You're booked! ✅</h4>
+        <p>
+            @_confirmed.Patient.FullName —
+            <strong>@_confirmed.StartsAt.ToString("dddd d MMMM, HH:mm")</strong>
+        </p>
+        <hr />
+        <p class="mb-0">
+            Your confirmation code is
+            <span class="fs-2 fw-bold font-monospace">@_confirmed.ConfirmationCode</span>
+        </p>
+        <p class="text-muted">Bring it to the kiosk to check in. You can also cancel with it.</p>
+    </div>
+    <button class="btn btn-outline-primary" @onclick="Reset">Book another</button>
+}
+else
+{
+    <div class="mb-3 mt-3" style="max-width: 22rem;">
+        <label class="form-label" for="date">Day</label>
+        <InputDate id="date" class="form-control" @bind-Value="_date" @bind-Value:after="LoadSlotsAsync" />
+    </div>
+
+    @if (_loading)
+    {
+        <p>Loading free slots…</p>
+    }
+    else if (_slots.Count == 0)
+    {
+        <p class="text-muted">No free slots on that day — try another date.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-wrap gap-2 mb-4" style="max-width: 40rem;">
+            @foreach (var slot in _slots)
+            {
+                <button class="btn @(slot == _selected ? "btn-primary" : "btn-outline-secondary")"
+                        @onclick="() => _selected = slot">
+                    @slot.ToString("HH:mm")
+                </button>
+            }
+        </div>
+    }
+
+    @if (_selected is not null)
+    {
+        <EditForm Model="_form" OnValidSubmit="SubmitAsync" FormName="book">
+            <DataAnnotationsValidator />
+            <div class="mb-3" style="max-width: 22rem;">
+                <label class="form-label" for="name">Full name</label>
+                <InputText id="name" class="form-control" @bind-Value="_form.FullName" />
+                <ValidationMessage For="() => _form.FullName" />
+            </div>
+            <div class="mb-3" style="max-width: 22rem;">
+                <label class="form-label" for="phone">Phone</label>
+                <InputText id="phone" class="form-control" @bind-Value="_form.Phone" />
+                <ValidationMessage For="() => _form.Phone" />
+            </div>
+            <div class="mb-3" style="max-width: 22rem;">
+                <label class="form-label" for="email">Email (optional)</label>
+                <InputText id="email" class="form-control" @bind-Value="_form.Email" />
+            </div>
+            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                Book @_selected?.ToString("HH:mm")
+            </button>
+        </EditForm>
+    }
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-warning mt-3">@_error</div>
+    }
+}
+
+@code {
+    private DateOnly _date = DateOnly.FromDateTime(DateTime.UtcNow);
+    private List<DateTime> _slots = [];
+    private DateTime? _selected;
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private ClinicLive.Domain.Appointment? _confirmed;
+    private BookForm _form = new();
+
+    protected override Task OnInitializedAsync() => LoadSlotsAsync();
+
+    private async Task LoadSlotsAsync()
+    {
+        _loading = true;
+        _selected = null;
+        _slots = await Booking.GetFreeSlotsAsync(_date);
+        _loading = false;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_selected is null)
+        {
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        var result = await Booking.BookAsync(_form.FullName!, _form.Phone!, _form.Email, _selected.Value);
+        _saving = false;
+
+        if (result.Success)
+        {
+            _confirmed = result.Appointment;
+        }
+        else
+        {
+            _error = result.Error;
+            await LoadSlotsAsync();
+        }
+    }
+
+    private async Task Reset()
+    {
+        _confirmed = null;
+        _form = new BookForm();
+        await LoadSlotsAsync();
+    }
+
+    private sealed class BookForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "We need a name for the appointment.")]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string? FullName { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "We need a phone number to find your booking later.")]
+        [System.ComponentModel.DataAnnotations.StringLength(30)]
+        public string? Phone { get; set; }
+
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string? Email { get; set; }
+    }
+}

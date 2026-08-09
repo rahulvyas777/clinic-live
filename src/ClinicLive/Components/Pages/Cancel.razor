@@ -1,0 +1,39 @@
+@page "/cancel"
+@rendermode InteractiveServer
+@using ClinicLive.Services
+@inject BookingService Booking
+
+<PageTitle>Cancel a booking — ClinicLive</PageTitle>
+
+<h1>Cancel a booking</h1>
+
+<p>Enter the confirmation code from when you booked.</p>
+
+<div class="d-flex gap-2 mb-3" style="max-width: 22rem;">
+    <input class="form-control text-uppercase font-monospace" maxlength="6"
+           @bind="_code" placeholder="e.g. K7M2XQ" />
+    <button class="btn btn-danger" @onclick="CancelAsync" disabled="@(_code.Length < 6)">Cancel it</button>
+</div>
+
+@if (_message is not null)
+{
+    <div class="alert @(_ok ? "alert-success" : "alert-warning")">@_message</div>
+}
+
+@code {
+    private string _code = string.Empty;
+    private string? _message;
+    private bool _ok;
+
+    private async Task CancelAsync()
+    {
+        _ok = await Booking.CancelAsync(_code);
+        _message = _ok
+            ? "Your appointment is cancelled. The slot is free again — book any time."
+            : "We couldn't find an active booking with that code. Check the code and try again.";
+        if (_ok)
+        {
+            _code = string.Empty;
+        }
+    }
+}
