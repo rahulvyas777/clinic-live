@@ -31,14 +31,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(a => a.ConfirmationCode).IsUnique();
 
             // Two ACTIVE appointments can never share a slot; a cancelled one frees it.
-            e.HasIndex(a => a.StartsAt)
+            // NOTE the explicit name: EF identifies an index by its property list, so
+            // two HasIndex(a => a.StartsAt) calls silently MERGE into one — our first
+            // hardening attempt renamed this index instead of adding a second one.
+            // Distinct names make them distinct indexes.
+            e.HasIndex(a => a.StartsAt, "ix_appointments_slot_active_unique")
                 .IsUnique()
-                .HasFilter("status NOT IN ('Cancelled', 'NoShow')");
+                .HasFilter("status NOT IN ('Cancelled', 'NoShow')")
+                .HasDatabaseName("ix_appointments_slot_active_unique");
 
             // Part 11 hardening: the partial index above only covers ACTIVE rows, so
             // the all-statuses day-range queries (staff pages) get their own index —
             // EXPLAIN showed a seq scan without it.
-            e.HasIndex(a => a.StartsAt).HasDatabaseName("ix_appointments_starts_at_all");
+            e.HasIndex(a => a.StartsAt, "ix_appointments_starts_at_all")
+                .HasDatabaseName("ix_appointments_starts_at_all");
 
             // Status is stored as text; the database should refuse values the enum
             // doesn't have (a raw UPDATE can bypass every C# check).
