@@ -5,6 +5,7 @@
 @using ClinicLive.Services
 @using Microsoft.AspNetCore.SignalR.Client
 @inject QueueService QueueSvc
+@inject ClinicTime Clinic
 @inject NavigationManager Navigation
 
 <PageTitle>Queue — ClinicLive</PageTitle>
@@ -41,8 +42,8 @@
                         <tr>
                             <td>@n</td>
                             <td>@item.DisplayName</td>
-                            <td class="font-monospace">@item.SlotAt.ToString("HH:mm")</td>
-                            <td class="font-monospace">@item.CheckedInAt.ToString("HH:mm")</td>
+                            <td class="font-monospace">@Clinic.Local(item.SlotAt)</td>
+                            <td class="font-monospace">@Clinic.Local(item.CheckedInAt)</td>
                         </tr>
                     }
                 </tbody>

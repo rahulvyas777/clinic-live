@@ -5,6 +5,7 @@
 @using ClinicLive.Domain
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ClinicLive.Services.ClinicTime Clinic
 
 <PageTitle>Today's appointments — ClinicLive</PageTitle>
 
@@ -28,7 +29,7 @@ else
             @foreach (var a in _appointments)
             {
                 <tr>
-                    <td class="font-monospace">@a.StartsAt.ToString("HH:mm")</td>
+                    <td class="font-monospace">@Clinic.Local(a.StartsAt)</td>
                     <td>@a.Patient.FullName</td>
                     <td>@a.Patient.Phone</td>
                     <td><span class="badge @BadgeFor(a.Status)">@a.Status</span></td>
@@ -44,10 +45,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        var dayStart = DateTime.UtcNow.Date;
+        var (dayStart, dayEnd) = Clinic.DayBoundsUtc(Clinic.Today);
         _appointments = await db.Appointments
             .Include(a => a.Patient)
-            .Where(a => a.StartsAt >= dayStart && a.StartsAt < dayStart.AddDays(1))
+            .Where(a => a.StartsAt >= dayStart && a.StartsAt < dayEnd)
             .OrderBy(a => a.StartsAt)
             .ToListAsync();
     }

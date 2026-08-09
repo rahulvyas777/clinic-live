@@ -31,12 +31,24 @@ public class SlotTests
     [Fact]
     public void A_day_has_32_slots_from_0900_to_1645()
     {
-        var slots = BookingService.AllSlotsFor(new DateOnly(2026, 8, 10)).ToList();
+        var slots = BookingService.AllSlotsFor(new DateOnly(2026, 8, 10), TimeZoneInfo.Utc).ToList();
 
         Assert.Equal(32, slots.Count);                       // 8 hours x 4 slots
         Assert.Equal(new TimeOnly(9, 0), TimeOnly.FromDateTime(slots[0]));
         Assert.Equal(new TimeOnly(16, 45), TimeOnly.FromDateTime(slots[^1]));
         Assert.All(slots, s => Assert.Equal(0, s.Minute % 15));
         Assert.All(slots, s => Assert.Equal(DateTimeKind.Utc, s.Kind));
+    }
+
+    [Fact]
+    public void Slots_mean_the_clinic_wall_clock_not_utc()
+    {
+        // Part 10's timezone fix: 09:00 in Auckland is NOT 09:00 UTC.
+        var auckland = TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland");
+        var slots = BookingService.AllSlotsFor(new DateOnly(2026, 8, 10), auckland).ToList();
+
+        var firstLocal = TimeZoneInfo.ConvertTimeFromUtc(slots[0], auckland);
+        Assert.Equal(new TimeOnly(9, 0), TimeOnly.FromDateTime(firstLocal));
+        Assert.NotEqual(new TimeOnly(9, 0), TimeOnly.FromDateTime(slots[0])); // the UTC instant differs
     }
 }

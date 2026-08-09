@@ -44,6 +44,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.AddSingleton<ClinicLive.Services.ClinicTime>();
 builder.Services.AddScoped<ClinicLive.Services.BookingService>();
 builder.Services.AddScoped<ClinicLive.Services.QueueService>();
 builder.Services.AddScoped<ClinicLive.Services.ChatService>();

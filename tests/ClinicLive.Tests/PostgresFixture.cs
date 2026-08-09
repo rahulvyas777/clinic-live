@@ -20,6 +20,10 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public IDbContextFactory<ApplicationDbContext> DbFactory { get; private set; } = null!;
 
+    /// <summary>Empty config → the clinic runs on UTC, keeping test times deterministic.</summary>
+    public ClinicLive.Services.ClinicTime ClinicTime { get; } =
+        new(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();

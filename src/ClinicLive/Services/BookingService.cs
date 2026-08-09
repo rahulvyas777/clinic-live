@@ -6,21 +6,21 @@ namespace ClinicLive.Services;
 
 public sealed record BookingResult(bool Success, string? Error = null, Appointment? Appointment = null);
 
-public class BookingService(IDbContextFactory<ApplicationDbContext> dbFactory)
+public class BookingService(IDbContextFactory<ApplicationDbContext> dbFactory, ClinicTime clinic)
 {
-    public const int OpeningHour = 9;   // clinic opens 09:00
-    public const int ClosingHour = 17;  // last slot starts 16:45
+    public const int OpeningHour = 9;   // clinic opens 09:00 local
+    public const int ClosingHour = 17;  // last slot starts 16:45 local
     public const int SlotMinutes = 15;
 
-    /// <summary>All bookable slot times for a date that are still free and not in the past.</summary>
+    /// <summary>All bookable slot times (UTC) for a clinic-local date that are free and not in the past.</summary>
     public async Task<List<DateTime>> GetFreeSlotsAsync(DateOnly date)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
 
-        var dayStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var (dayStart, dayEnd) = clinic.DayBoundsUtc(date);
         var taken = await db.Appointments
             .Where(a => a.StartsAt >= dayStart
-                     && a.StartsAt < dayStart.AddDays(1)
+                     && a.StartsAt < dayEnd
                      && a.Status != AppointmentStatus.Cancelled
                      && a.Status != AppointmentStatus.NoShow)
             .Select(a => a.StartsAt)
@@ -29,14 +29,18 @@ public class BookingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var takenSet = taken.ToHashSet();
         var now = DateTime.UtcNow;
 
-        return AllSlotsFor(date)
+        return AllSlotsFor(date, clinic.Zone)
             .Where(slot => !takenSet.Contains(slot) && slot > now)
             .ToList();
     }
 
-    public async Task<BookingResult> BookAsync(string fullName, string phone, string? email, DateTime slot)
+    public async Task<BookingResult> BookAsync(string fullName, string phone, string? email, DateTime slotUtc)
     {
-        if (slot.Minute % SlotMinutes != 0 || slot.Hour < OpeningHour || slot.Hour >= ClosingHour)
+        slotUtc = DateTime.SpecifyKind(slotUtc, DateTimeKind.Utc);
+
+        // Validate against the clinic's wall clock, not the server's.
+        var local = TimeZoneInfo.ConvertTimeFromUtc(slotUtc, clinic.Zone);
+        if (local.Minute % SlotMinutes != 0 || local.Hour < OpeningHour || local.Hour >= ClosingHour)
         {
             return new BookingResult(false, "That's not a valid slot time.");
         }
@@ -49,7 +53,7 @@ public class BookingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var appointment = new Appointment
         {
             Patient = patient,
-            StartsAt = DateTime.SpecifyKind(slot, DateTimeKind.Utc),
+            StartsAt = slotUtc,
             ConfirmationCode = ConfirmationCode.NewCode(),
         };
         db.Appointments.Add(appointment);
@@ -84,13 +88,15 @@ public class BookingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return true;
     }
 
-    public static IEnumerable<DateTime> AllSlotsFor(DateOnly date)
+    /// <summary>Every slot of a clinic-local day, as UTC instants.</summary>
+    public static IEnumerable<DateTime> AllSlotsFor(DateOnly date, TimeZoneInfo zone)
     {
-        var first = date.ToDateTime(new TimeOnly(OpeningHour, 0), DateTimeKind.Utc);
         var count = (ClosingHour - OpeningHour) * 60 / SlotMinutes;
         for (var i = 0; i < count; i++)
         {
-            yield return first.AddMinutes(i * SlotMinutes);
+            var wallTime = new TimeOnly(OpeningHour, 0).AddMinutes(i * SlotMinutes);
+            yield return TimeZoneInfo.ConvertTimeToUtc(
+                date.ToDateTime(wallTime, DateTimeKind.Unspecified), zone);
         }
     }
 }

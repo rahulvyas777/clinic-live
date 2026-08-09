@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using ClinicLive.Services
 @inject BookingService Booking
+@inject ClinicTime Clinic
 
 <PageTitle>Book an appointment — ClinicLive</PageTitle>
 
@@ -13,7 +14,7 @@
         <h4 class="alert-heading">You're booked! ✅</h4>
         <p>
             @_confirmed.Patient.FullName —
-            <strong>@_confirmed.StartsAt.ToString("dddd d MMMM, HH:mm")</strong>
+            <strong>@Clinic.Local(_confirmed.StartsAt, "dddd d MMMM, HH:mm")</strong>
         </p>
         <hr />
         <p class="mb-0">
@@ -46,7 +47,7 @@ else
             {
                 <button class="btn @(slot == _selected ? "btn-primary" : "btn-outline-secondary")"
                         @onclick="() => _selected = slot">
-                    @slot.ToString("HH:mm")
+                    @Clinic.Local(slot)
                 </button>
             }
         </div>
@@ -71,7 +72,7 @@ else
                 <InputText id="email" class="form-control" @bind-Value="_form.Email" />
             </div>
             <button type="submit" class="btn btn-primary" disabled="@_saving">
-                Book @_selected?.ToString("HH:mm")
+                Book @(_selected is { } s ? Clinic.Local(s) : "")
             </button>
         </EditForm>
     }
@@ -83,7 +84,9 @@ else
 }
 
 @code {
-    private DateOnly _date = DateOnly.FromDateTime(DateTime.UtcNow);
+    private DateOnly _date;
+
+    protected override void OnInitialized() => _date = Clinic.Today;
     private List<DateTime> _slots = [];
     private DateTime? _selected;
     private bool _loading = true;
