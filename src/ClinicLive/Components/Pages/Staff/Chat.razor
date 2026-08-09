@@ -1,0 +1,128 @@
+@page "/staff/chat"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IDisposable
+@using ClinicLive.Services
+@inject ChatService ChatSvc
+@inject ChatRoom Room
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Staff chat — ClinicLive</PageTitle>
+
+<h1>Staff chat</h1>
+
+<div class="row" style="max-width: 56rem;">
+    <div class="col-md-9">
+        <div class="border rounded p-3 mb-2 overflow-auto" style="height: 24rem; background: var(--bs-light);">
+            @foreach (var m in _messages)
+            {
+                <div class="mb-2">
+                    <strong>@ShortName(m.SenderName)</strong>
+                    <span class="text-muted small">@m.SentAt.ToString("HH:mm")</span><br />
+                    @m.Body
+                </div>
+            }
+        </div>
+
+        <p class="text-muted small mb-2" style="min-height: 1.2rem;">
+            @if (_typingOthers.Count > 0)
+            {
+                @string.Join(", ", _typingOthers.Select(ShortName))
+                <text> typing…</text>
+            }
+        </p>
+
+        <div class="d-flex gap-2">
+            <input class="form-control" maxlength="2000" placeholder="Message the team…"
+                   @bind="_draft" @bind:event="oninput" @bind:after="OnTyping"
+                   @onkeydown="OnKeyDown" />
+            <button class="btn btn-primary" @onclick="SendAsync" disabled="@string.IsNullOrWhiteSpace(_draft)">
+                Send
+            </button>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <h6 class="text-muted">Online</h6>
+        <ul class="list-unstyled">
+            @foreach (var user in _online)
+            {
+                <li><span class="text-success">●</span> @ShortName(user)</li>
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    private List<ChatMessageView> _messages = [];
+    private IReadOnlyList<string> _online = [];
+    private List<string> _typingOthers = [];
+    private string _draft = string.Empty;
+    private string _me = string.Empty;
+    private string _myId = string.Empty;
+    private bool _joined;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _me = auth.User.Identity?.Name ?? "unknown";
+        _myId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        _messages = await ChatSvc.GetRecentAsync();
+
+        Room.MessageReceived += OnMessage;
+        Room.PresenceChanged += OnPresence;
+        Room.TypingChanged += OnTypingChanged;
+        Room.Join(_me);
+        _joined = true;
+
+        _online = Room.OnlineUsers;
+    }
+
+    private async Task SendAsync()
+    {
+        var body = _draft;
+        _draft = string.Empty;
+        await ChatSvc.SendAsync(_myId, _me, body);
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" && !string.IsNullOrWhiteSpace(_draft) ? SendAsync() : Task.CompletedTask;
+
+    private void OnTyping() => Room.SetTyping(_me);
+
+    private void OnMessage(ChatMessageView m) => _ = InvokeAsync(() =>
+    {
+        _messages.Add(m);
+        if (_messages.Count > 200)
+        {
+            _messages.RemoveAt(0);
+        }
+        StateHasChanged();
+    });
+
+    private void OnPresence() => _ = InvokeAsync(() =>
+    {
+        _online = Room.OnlineUsers;
+        StateHasChanged();
+    });
+
+    private void OnTypingChanged() => _ = InvokeAsync(() =>
+    {
+        _typingOthers = Room.TypingUsers.Where(u => u != _me).ToList();
+        StateHasChanged();
+    });
+
+    /// <summary>reception@cliniclive.test → reception</summary>
+    private static string ShortName(string email) => email.Split('@')[0];
+
+    public void Dispose()
+    {
+        Room.MessageReceived -= OnMessage;
+        Room.PresenceChanged -= OnPresence;
+        Room.TypingChanged -= OnTypingChanged;
+        if (_joined)
+        {
+            Room.Leave(_me);
+        }
+    }
+}

@@ -46,6 +46,8 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.AddScoped<ClinicLive.Services.BookingService>();
 builder.Services.AddScoped<ClinicLive.Services.QueueService>();
+builder.Services.AddScoped<ClinicLive.Services.ChatService>();
+builder.Services.AddSingleton<ClinicLive.Services.ChatRoom>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
