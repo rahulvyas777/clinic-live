@@ -6,6 +6,7 @@
 @inject ChatService ChatSvc
 @inject ChatRoom Room
 @inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JS
 
 <PageTitle>Staff chat — ClinicLive</PageTitle>
 
@@ -18,7 +19,7 @@
 
 <div class="chat">
     <div class="chat-main">
-        <div class="chat-log" role="log" aria-label="Messages">
+        <div class="chat-log" role="log" aria-label="Messages" @ref="_log">
             @foreach (var m in _messages)
             {
                 <div class="chat-msg @(m.SenderName == _me ? "mine" : "")" @key="m">
@@ -68,6 +69,9 @@
     private string _myId = string.Empty;
     private bool _joined;
 
+    private ElementReference _log;
+    private bool _scrollPending;
+
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
@@ -104,6 +108,7 @@
         {
             _messages.RemoveAt(0);
         }
+        _scrollPending = true;
         StateHasChanged();
     });
 
@@ -118,6 +123,15 @@
         _typingOthers = Room.TypingUsers.Where(u => u != _me).ToList();
         StateHasChanged();
     });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || _scrollPending)
+        {
+            _scrollPending = false;
+            await JS.InvokeVoidAsync("clinic.scrollToEnd", _log);
+        }
+    }
 
     /// <summary>reception@cliniclive.test → reception</summary>
     private static string ShortName(string email) => email.Split('@')[0];

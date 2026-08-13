@@ -488,6 +488,33 @@ main.page {
 }
 .skip-link:focus { top: 0; text-decoration: none; }
 
+/* ---------- micro-interactions (Part 9) ----------
+   Three rules: motion explains a CHANGE (never decoration), nothing moves
+   longer than 400ms, and prefers-reduced-motion turns it all off (the
+   global guard below handles that for free). Blazor's @key makes elements
+   re-created on change, so a plain CSS entry animation IS the update cue. */
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(0.35em); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+    0%   { opacity: 0; transform: scale(0.92); }
+    70%  { transform: scale(1.03); }
+    100% { opacity: 1; transform: none; }
+}
+
+.board-name { animation: rise-in 400ms ease; }
+.board-list li { animation: rise-in 300ms ease backwards; }
+.board-list li:nth-child(2) { animation-delay: 40ms; }
+.board-list li:nth-child(3) { animation-delay: 80ms; }
+.board-list li:nth-child(4) { animation-delay: 120ms; }
+.board-list li:nth-child(5) { animation-delay: 160ms; }
+
+.chat-msg { animation: rise-in 250ms ease; }
+.kiosk-success { animation: pop-in 350ms ease; }
+.ticket { animation: pop-in 350ms ease; }
+.slot-btn:active { transform: scale(0.96); }
+
 /* motion discipline: none of this for people who asked for calm */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }

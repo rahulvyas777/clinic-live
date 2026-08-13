@@ -30,6 +30,24 @@ the whole application was built with AI assistance (Claude), and this repo shows
 git checkout part-07   # see the app exactly as it stands at the end of Part 7
 ```
 
+## Season two: the redesign — [From Prompt to Polish](https://www.coder000.com/series/from-prompt-to-polish)
+
+The same app, redesigned with AI — Bootstrap out, a token design system in.
+`git checkout part-12` is forever the "before" photo; the `shots/` folder holds
+the before/after evidence for every part.
+
+| Tag | Series part | What changed |
+|---|---|---|
+| `polish-02` | Part 2 — foundations | Tokens ("porcelain & petrol"), Atkinson Hyperlegible, Bootstrap deleted, top bar, chrome-free kiosk/board |
+| `polish-03` | Part 3 — the screenshot loop | `tools/shots` — the Playwright harness that photographs every surface |
+| `polish-04` | Part 4 — booking (phone UX) | Grouped slots, the ticket, the copy pass |
+| `polish-05` | Part 5 — kiosk (touch UX) | Giant code entry, success takeover, auto-reset |
+| `polish-06` | Part 6 — board (signage UX) | Fixed dark palette, vmin sizing, live clock, status-only-when-wrong |
+| `polish-07` | Part 7 — staff (pro-tool UX) | Stat headers, WAITED column, chat bubbles |
+| `polish-08` | Part 8 — accessibility | Live regions, landmarks, skip link, contrast audit |
+| `polish-09` | Part 9 — micro-interactions | Change-explaining motion, chat auto-scroll, reduced-motion off-switch |
+
+
 ## Run it locally
 
 Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download), Docker.
