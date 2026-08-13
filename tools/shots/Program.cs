@@ -69,7 +69,7 @@ if (checkinCode is not null)
     foreach (var code in checkinCode.Split(','))
     {
         Console.WriteLine($"checking in {code}:");
-        await kiosk.FillAsync("input.form-control-lg", code);
+        await kiosk.FillAsync(".kiosk-code, input.form-control-lg", code);
         await kiosk.ClickAsync("button:has-text('Check in')");
         await kiosk.WaitForTimeoutAsync(800);
     }

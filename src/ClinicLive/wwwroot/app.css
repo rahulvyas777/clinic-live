@@ -337,6 +337,31 @@ main.page {
 }
 .ticket-hint { color: var(--muted); font-size: 0.9rem; margin-bottom: 0; }
 
+/* ---------- kiosk (touch appliance) ---------- */
+.kiosk { text-align: center; max-width: 30rem; width: 100%; }
+.kiosk h1 { font-size: 2.6rem; }
+.kiosk-hint { color: var(--muted); font-size: 1.2rem; }
+
+.kiosk-code {
+    display: block; width: 100%; margin: var(--s-5) 0;
+    font-family: var(--mono); font-size: 3rem; font-weight: 700;
+    text-align: center; letter-spacing: 0.35em; text-transform: uppercase;
+    color: var(--ink); background: var(--surface);
+    border: 2px solid var(--line); border-radius: var(--radius-lg);
+    padding: var(--s-4) 0 var(--s-4) 0.35em; /* left pad balances letter-spacing */
+}
+.kiosk-code:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.kiosk-code::placeholder { color: var(--line); }
+
+.kiosk-go { width: 100%; font-size: 1.4rem; padding: 1rem; }
+
+.kiosk-oops { margin-top: var(--s-4); font-size: 1.1rem; text-align: center; }
+
+.kiosk-success .kiosk-emoji { font-size: 4.5rem; }
+.kiosk-success h1 { color: var(--ok); font-size: 3.2rem; }
+.kiosk-position { font-size: 1.6rem; }
+.kiosk-position strong { font-size: 2.4rem; color: var(--primary); }
+
 /* ---------- Blazor plumbing ----------
    The template's stylesheet quietly carried `#blazor-error-ui { display:none }`.
    Delete the template CSS and the "hidden" error banner greets every visitor —

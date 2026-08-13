@@ -1,52 +1,78 @@
 @page "/kiosk"
 @layout ClinicLive.Components.Layout.BareLayout
 @rendermode InteractiveServer
+@implements IDisposable
 @using ClinicLive.Services
 @inject QueueService Queue
 
 <PageTitle>Check in — ClinicLive</PageTitle>
 
-<div class="text-center mt-5" style="max-width: 30rem; margin: 0 auto;">
-    <h1 class="display-5">Welcome 👋</h1>
-    <p class="lead">Type the code from your booking to check in.</p>
+@if (_result is { Success: true })
+{
+    <div class="kiosk kiosk-success">
+        <div class="kiosk-emoji" aria-hidden="true">🪑</div>
+        <h1>You're in!</h1>
+        <p class="kiosk-position">Number <strong>@_result.Position</strong> in the queue</p>
+        <p class="kiosk-hint">Take a seat — watch the board for your name.</p>
+    </div>
+}
+else
+{
+    <div class="kiosk">
+        <h1>Welcome 👋</h1>
+        <p class="kiosk-hint">Type the six-letter code from your booking ticket.</p>
 
-    <input class="form-control form-control-lg text-center text-uppercase font-monospace fs-1 my-4"
-           maxlength="6" @bind="_code" @bind:event="oninput" placeholder="······" />
+        <input class="kiosk-code" maxlength="6" autocomplete="off" spellcheck="false"
+               aria-label="Your six-character confirmation code"
+               @bind="_code" @bind:event="oninput" placeholder="······" />
 
-    <button class="btn btn-primary btn-lg px-5" @onclick="CheckInAsync"
-            disabled="@(_code.Length < 6 || _busy)">
-        Check in
-    </button>
+        <button class="btn btn-primary btn-lg kiosk-go" @onclick="CheckInAsync"
+                disabled="@(_code.Length < 6 || _busy)">
+            @(_busy ? "One moment…" : "Check in")
+        </button>
 
-    @if (_result is not null)
-    {
-        @if (_result.Success)
+        @if (_result is { Success: false })
         {
-            <div class="alert alert-success mt-4 fs-4">
-                You're checked in! You are <strong>number @_result.Position</strong> in the queue.
-                Watch the board for your name. 🪑
+            <div class="alert alert-warning kiosk-oops">
+                @_result.Error
+                <br /><span class="text-muted small">Stuck? The front desk is right there — they'll sort you out.</span>
             </div>
         }
-        else
-        {
-            <div class="alert alert-warning mt-4">@_result.Error</div>
-        }
-    }
-</div>
+    </div>
+}
 
 @code {
     private string _code = string.Empty;
     private bool _busy;
     private CheckInResult? _result;
+    private CancellationTokenSource? _resetCts;
 
     private async Task CheckInAsync()
     {
         _busy = true;
         _result = await Queue.CheckInAsync(_code);
         _busy = false;
+
         if (_result.Success)
         {
             _code = string.Empty;
+
+            // A kiosk serves a queue of strangers: celebrate, then reset for the next person.
+            _resetCts?.Cancel();
+            _resetCts = new CancellationTokenSource();
+            var token = _resetCts.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(8), token);
+                    _result = null;
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (TaskCanceledException) { }
+            }, token);
         }
     }
+
+    public void Dispose() => _resetCts?.Cancel();
 }
