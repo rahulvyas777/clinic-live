@@ -18,7 +18,7 @@
 
 <div class="chat">
     <div class="chat-main">
-        <div class="chat-log" aria-label="Messages">
+        <div class="chat-log" role="log" aria-label="Messages">
             @foreach (var m in _messages)
             {
                 <div class="chat-msg @(m.SenderName == _me ? "mine" : "")" @key="m">
@@ -31,7 +31,7 @@
             }
         </div>
 
-        <p class="chat-typing">
+        <p class="chat-typing" role="status">
             @if (_typingOthers.Count > 0)
             {
                 @string.Join(", ", _typingOthers.Select(ShortName))

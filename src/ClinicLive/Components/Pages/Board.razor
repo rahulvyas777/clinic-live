@@ -16,7 +16,7 @@
         <time class="board-clock">@Clinic.Local(DateTime.UtcNow)</time>
     </header>
 
-    <section class="board-serving">
+    <section class="board-serving" aria-live="polite">
         <p class="board-label">Now serving</p>
         @if (_snapshot?.NowServing is { } serving)
         {
@@ -28,7 +28,7 @@
         }
     </section>
 
-    <section class="board-next">
+    <section class="board-next" aria-live="polite">
         <p class="board-label">Up next</p>
         @if (_snapshot is null || _snapshot.Waiting.Count == 0)
         {

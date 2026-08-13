@@ -1,10 +1,11 @@
 @* Chrome-free layout for "appliance" surfaces: the check-in kiosk and the
-   waiting-room board. A TV on a wall does not need a nav bar. *@
+   waiting-room board. A TV on a wall does not need a nav bar — but it is
+   still a document: <main> keeps the landmark for assistive tech. *@
 @inherits LayoutComponentBase
 
-<div class="appliance">
+<main class="appliance">
     @Body
-</div>
+</main>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

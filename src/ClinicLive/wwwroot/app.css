@@ -479,6 +479,15 @@ main.page {
     .brand { font-size: 1.05rem; }
 }
 
+/* ---------- accessibility ---------- */
+.skip-link {
+    position: absolute; left: var(--s-4); top: -4rem; z-index: 50;
+    background: var(--primary); color: var(--on-primary);
+    padding: var(--s-2) var(--s-4); border-radius: 0 0 var(--radius) var(--radius);
+    transition: top 120ms ease;
+}
+.skip-link:focus { top: 0; text-decoration: none; }
+
 /* motion discipline: none of this for people who asked for calm */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }

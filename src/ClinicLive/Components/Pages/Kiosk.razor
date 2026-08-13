@@ -9,7 +9,7 @@
 
 @if (_result is { Success: true })
 {
-    <div class="kiosk kiosk-success">
+    <div class="kiosk kiosk-success" role="status">
         <div class="kiosk-emoji" aria-hidden="true">🪑</div>
         <h1>You're in!</h1>
         <p class="kiosk-position">Number <strong>@_result.Position</strong> in the queue</p>
@@ -33,7 +33,7 @@ else
 
         @if (_result is { Success: false })
         {
-            <div class="alert alert-warning kiosk-oops">
+            <div class="alert alert-warning kiosk-oops" role="status">
                 @_result.Error
                 <br /><span class="text-muted small">Stuck? The front desk is right there — they'll sort you out.</span>
             </div>

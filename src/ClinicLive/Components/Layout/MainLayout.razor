@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 
 <div class="shell">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="/">Clinic<span class="pulse">Live</span></a>
@@ -38,7 +39,7 @@
         </div>
     </header>
 
-    <main class="page">
+    <main class="page" id="main-content">
         @Body
     </main>
 
