@@ -1,19 +1,53 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager NavigationManager
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="shell">
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="/">Clinic<span class="pulse">Live</span></a>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <nav class="topnav" aria-label="Main navigation">
+                <NavLink href="book">Book</NavLink>
+                <NavLink href="cancel">Cancel</NavLink>
+                <AuthorizeView>
+                    <Authorized>
+                        <NavLink href="staff/appointments">Appointments</NavLink>
+                        <NavLink href="staff/queue">Queue</NavLink>
+                        <NavLink href="staff/chat">Chat</NavLink>
+                    </Authorized>
+                </AuthorizeView>
+            </nav>
+
+            <div class="topnav-spacer"></div>
+
+            <nav class="topnav" aria-label="Account">
+                <AuthorizeView>
+                    <Authorized>
+                        <form action="Account/Logout" method="post" style="display: contents;">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
+                            <button type="submit" class="linklike">Sign out</button>
+                        </form>
+                    </Authorized>
+                    <NotAuthorized>
+                        <NavLink href="Account/Login">Staff sign-in</NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </nav>
         </div>
+    </header>
 
-        <article class="content px-4">
-            @Body
-        </article>
+    <main class="page">
+        @Body
     </main>
+
+    <footer class="shell-footer">
+        Front of house: <a href="/kiosk">check-in kiosk</a> · <a href="/board">waiting room</a>
+        <br />
+        ClinicLive — the demo clinic from
+        <a href="https://www.coder000.com/series/from-prompt-to-polish">coder000.com's design series</a>
+    </footer>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -21,3 +55,24 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private string? _currentUrl;
+
+    protected override void OnInitialized()
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

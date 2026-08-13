@@ -1,60 +1,332 @@
-html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+/* ============================================================
+   ClinicLive design system — "Calm Practice: porcelain & petrol"
+   Built in Part 2 of coder000's From Prompt to Polish series.
+
+   Rules of the house:
+   - Every color, size and radius is a token. Components never
+     invent values; they spend tokens.
+   - Light and dark are the same system: dark redefines tokens,
+     components don't change.
+   - We keep Bootstrap's class VOCABULARY (btn, form-control,
+     alert…) but the implementation is ours — the markup kept
+     compiling the day Bootstrap left.
+   ============================================================ */
+
+/* ---------- tokens ---------- */
+:root {
+    /* surfaces */
+    --bg: #F5F8F8;            /* porcelain */
+    --surface: #FFFFFF;
+    --surface-2: #EDF2F2;     /* recessed panels */
+    --line: #DCE5E5;
+
+    /* text */
+    --ink: #182A2D;
+    --muted: #5A6E71;
+
+    /* brand */
+    --primary: #16696F;       /* petrol teal */
+    --on-primary: #FFFFFF;
+    --primary-soft: #E3EFEF;
+
+    /* meaning */
+    --ok: #3E8460;
+    --ok-soft: #E4F0EA;
+    --warn: #C96F4A;          /* soft coral/clay */
+    --warn-soft: #F7EAE3;
+    --danger: #B4473C;
+    --danger-soft: #F6E7E5;
+
+    /* type */
+    --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    /* shape & depth */
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgb(24 42 45 / 0.06), 0 4px 16px rgb(24 42 45 / 0.06);
+    --shadow-lg: 0 2px 4px rgb(24 42 45 / 0.08), 0 12px 32px rgb(24 42 45 / 0.10);
+
+    /* spacing scale (4px base) */
+    --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem;
+    --s-5: 1.5rem;  --s-6: 2rem;   --s-7: 3rem;
+
+    color-scheme: light;
 }
 
-a, .btn-link {
-    color: #006bb7;
-}
-
-.btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-.content {
-    padding-top: 1.1rem;
-}
-
-h1:focus {
-    outline: none;
-}
-
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
-}
-
-.invalid {
-    outline: 1px solid #e50000;
-}
-
-.validation-message {
-    color: #e50000;
-}
-
-.blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
-}
-
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #101B1D;
+        --surface: #182527;
+        --surface-2: #131F21;
+        --line: #24393B;
+        --ink: #E4EDEC;
+        --muted: #93A6A6;
+        --primary: #4FB3B8;
+        --on-primary: #0C2224;
+        --primary-soft: #143134;
+        --ok: #6FBF95;
+        --ok-soft: #16302484;
+        --warn: #E08A64;
+        --warn-soft: #33221b;
+        --danger: #E07A6E;
+        --danger-soft: #34201d;
+        --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.3);
+        --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
+        color-scheme: dark;
     }
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
-    text-align: end;
+/* ---------- reset & base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: start;
+h1, h2, h3, h4 { line-height: 1.2; margin: 0 0 var(--s-3); }
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.15rem; }
+p  { margin: 0 0 var(--s-4); }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; }
+
+/* Ring only where focus is an ACTION. The template's FocusOnNavigate moves
+   focus to the h1 on every navigation (good for screen readers) — a global
+   ring would draw a teal box around every page title. Screenshot caught it. */
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+h1:focus { outline: none; }
+
+::selection { background: var(--primary-soft); }
+
+/* ---------- app shell (top bar, no sidebar) ---------- */
+.shell { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 20;
+}
+
+.topbar-inner {
+    max-width: 64rem; margin: 0 auto; padding: 0 var(--s-4);
+    display: flex; align-items: center; gap: var(--s-4);
+    min-height: 3.5rem;
+}
+
+.brand {
+    font-weight: 700; font-size: 1.15rem; color: var(--ink);
+    display: inline-flex; align-items: baseline; gap: 2px;
+}
+.brand:hover { text-decoration: none; }
+.brand .pulse { color: var(--primary); }
+
+.topnav { display: flex; align-items: center; gap: var(--s-1); flex-wrap: wrap; }
+
+.topnav a, .topnav .linklike {
+    color: var(--muted); padding: var(--s-2) var(--s-3);
+    border-radius: var(--radius); font-weight: 700; font-size: 0.95rem;
+    border: 0; background: none; cursor: pointer; font-family: inherit;
+}
+.topnav a:hover, .topnav .linklike:hover {
+    color: var(--ink); background: var(--surface-2); text-decoration: none;
+}
+.topnav a.active { color: var(--primary); background: var(--primary-soft); }
+
+.topnav-spacer { flex: 1; }
+
+main.page {
+    flex: 1; width: 100%;
+    max-width: 64rem; margin: 0 auto; padding: var(--s-6) var(--s-4) var(--s-7);
+}
+
+.shell-footer {
+    border-top: 1px solid var(--line); color: var(--muted);
+    text-align: center; font-size: 0.85rem; padding: var(--s-4);
+}
+
+/* appliance surfaces (kiosk, board) render chrome-free via BareLayout */
+.appliance { min-height: 100dvh; display: grid; place-items: center; padding: var(--s-5); }
+
+/* ---------- buttons ---------- */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+    font-family: inherit; font-weight: 700; font-size: 1rem;
+    padding: 0.55rem 1.1rem; border-radius: var(--radius);
+    border: 1.5px solid transparent; cursor: pointer;
+    background: var(--surface-2); color: var(--ink);
+    transition: background 120ms ease, transform 80ms ease, box-shadow 120ms ease;
+    text-decoration: none;
+}
+.btn:hover { text-decoration: none; filter: brightness(0.97); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow); }
+.btn-danger  { background: var(--danger);  color: #fff; }
+.btn-outline-primary   { background: transparent; color: var(--primary); border-color: var(--primary); }
+.btn-outline-secondary { background: transparent; color: var(--muted);   border-color: var(--line); }
+.btn-outline-secondary:hover { color: var(--ink); border-color: var(--muted); }
+.btn-lg { font-size: 1.15rem; padding: 0.8rem 1.6rem; border-radius: var(--radius-lg); }
+
+/* ---------- forms ---------- */
+.form-label { display: block; font-weight: 700; margin-bottom: var(--s-1); }
+
+.form-control {
+    display: block; width: 100%;
+    font: inherit; color: var(--ink);
+    background: var(--surface); border: 1.5px solid var(--line);
+    border-radius: var(--radius); padding: 0.55rem 0.8rem;
+    transition: border-color 120ms ease;
+}
+.form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.form-control::placeholder { color: var(--muted); opacity: 0.7; }
+.form-control-lg { font-size: 1.3rem; padding: 0.8rem 1rem; border-radius: var(--radius-lg); }
+
+/* the Identity pages use Bootstrap's floating labels — a calm equivalent */
+.form-floating { position: relative; margin-bottom: var(--s-4); }
+.form-floating > .form-control { padding: 1.35rem 0.8rem 0.5rem; }
+.form-floating > label {
+    position: absolute; top: 0.9rem; left: 0.85rem; color: var(--muted);
+    pointer-events: none; transform-origin: 0 0; transition: transform 120ms ease;
+}
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+    transform: translateY(-0.55rem) scale(0.78);
+}
+
+.form-check { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+.form-check-input { width: 1.1rem; height: 1.1rem; accent-color: var(--primary); }
+
+.text-danger { color: var(--danger); font-size: 0.9rem; }
+.validation-message { color: var(--danger); font-size: 0.9rem; display: block; margin-top: var(--s-1); }
+
+/* ---------- alerts ---------- */
+.alert {
+    border-radius: var(--radius); padding: var(--s-4);
+    border: 1.5px solid var(--line); background: var(--surface-2);
+    margin-bottom: var(--s-4);
+}
+.alert-success { background: var(--ok-soft);     border-color: var(--ok);     }
+.alert-warning { background: var(--warn-soft);   border-color: var(--warn);   }
+.alert-danger  { background: var(--danger-soft); border-color: var(--danger); }
+.alert-heading { margin-top: 0; }
+.alert hr { border: 0; border-top: 1px solid var(--line); margin: var(--s-3) 0; }
+
+/* ---------- badges ---------- */
+.badge {
+    display: inline-block; font-size: 0.78rem; font-weight: 700;
+    padding: 0.25em 0.65em; border-radius: 999px; letter-spacing: 0.02em;
+}
+.text-bg-secondary { background: var(--surface-2);  color: var(--muted); }
+.text-bg-info      { background: var(--primary-soft); color: var(--primary); }
+.text-bg-primary   { background: var(--primary);    color: var(--on-primary); }
+.text-bg-success   { background: var(--ok-soft);    color: var(--ok); }
+.text-bg-warning   { background: var(--warn-soft);  color: var(--warn); }
+
+/* ---------- cards & tables ---------- */
+.card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+.card-body { padding: var(--s-4); }
+.card-title { margin-bottom: var(--s-2); }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+    text-align: left; font-size: 0.8rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    padding: var(--s-2) var(--s-3); border-bottom: 2px solid var(--line);
+}
+.table td { padding: var(--s-3); border-bottom: 1px solid var(--line); }
+.table-striped tbody tr:nth-child(odd) td { background: var(--surface-2); }
+.table-sm td, .table-sm th { padding: var(--s-2); }
+.align-middle td { vertical-align: middle; }
+
+.list-group { list-style: none; margin: 0; padding: 0; counter-reset: item; }
+.list-group-item {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: var(--s-3) var(--s-4);
+}
+.list-group-item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.list-group-item:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+.list-group-item + .list-group-item { border-top: 0; }
+.list-group-numbered .list-group-item { counter-increment: item; }
+.list-group-numbered .list-group-item::before { content: counter(item) ". "; color: var(--muted); }
+
+/* ---------- utilities (the subset the app actually uses) ---------- */
+.d-flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-column { flex-direction: column; }
+.gap-2 { gap: var(--s-2); }
+.row { display: flex; flex-wrap: wrap; gap: var(--s-5); }
+.col-md-6 { flex: 1 1 22rem; min-width: 0; }
+.w-100 { width: 100%; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.mb-0 { margin-bottom: 0; } .mb-2 { margin-bottom: var(--s-2); } .mb-3 { margin-bottom: var(--s-4); }
+.mt-2 { margin-top: var(--s-2); } .mt-3 { margin-top: var(--s-4); } .mt-4 { margin-top: var(--s-5); } .mt-5 { margin-top: var(--s-6); }
+.my-4 { margin-top: var(--s-5); margin-bottom: var(--s-5); }
+.px-3 { padding-left: var(--s-3); padding-right: var(--s-3); }
+.px-4 { padding-left: var(--s-4); padding-right: var(--s-4); }
+.px-5 { padding-left: var(--s-5); padding-right: var(--s-5); }
+.text-center { text-align: center; }
+.text-muted { color: var(--muted); }
+.text-success { color: var(--ok); }
+.text-uppercase { text-transform: uppercase; }
+.fw-bold { font-weight: 700; }
+.small { font-size: 0.85rem; }
+.fs-1 { font-size: 2.2rem; } .fs-2 { font-size: 1.8rem; } .fs-3 { font-size: 1.5rem; } .fs-4 { font-size: 1.25rem; }
+.display-1 { font-size: clamp(3rem, 9vw, 6rem); font-weight: 700; }
+.display-5 { font-size: 2.4rem; font-weight: 700; }
+.display-6 { font-size: 1.9rem; font-weight: 700; }
+.font-monospace { font-family: var(--mono); }
+.lead { font-size: 1.15rem; color: var(--muted); }
+.overflow-auto { overflow: auto; }
+.border { border: 1px solid var(--line); }
+.rounded { border-radius: var(--radius); }
+.p-3 { padding: var(--s-4); }
+
+/* ---------- Blazor plumbing ----------
+   The template's stylesheet quietly carried `#blazor-error-ui { display:none }`.
+   Delete the template CSS and the "hidden" error banner greets every visitor —
+   found by screenshot, of course. Blazor's JS un-hides it on a real error. */
+#blazor-error-ui {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--warn-soft); color: var(--ink);
+    border-top: 2px solid var(--warn);
+    padding: var(--s-3) var(--s-4);
+    box-shadow: var(--shadow-lg);
+}
+#blazor-error-ui .dismiss { float: right; cursor: pointer; margin-left: var(--s-3); }
+
+/* small screens: the bar tightens instead of stacking */
+.topnav a, .topnav .linklike { white-space: nowrap; }
+@media (max-width: 640px) {
+    .topbar-inner { gap: var(--s-2); padding: var(--s-1) var(--s-3); }
+    .topnav { gap: 0; }
+    .topnav a, .topnav .linklike { padding: var(--s-2); font-size: 0.9rem; }
+    .brand { font-size: 1.05rem; }
+}
+
+/* motion discipline: none of this for people who asked for calm */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    html { scroll-behavior: auto; }
 }
