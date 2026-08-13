@@ -9,11 +9,21 @@
 
 <PageTitle>Today's appointments — ClinicLive</PageTitle>
 
-<h1>Today's appointments</h1>
+<header class="staff-head">
+    <h1>Today</h1>
+    @if (_appointments is not null)
+    {
+        <p class="staff-stats">
+            <span class="stat"><strong>@_appointments.Count</strong> booked</span>
+            <span class="stat"><strong>@_appointments.Count(a => a.Status is AppointmentStatus.CheckedIn or AppointmentStatus.InProgress)</strong> in the building</span>
+            <span class="stat"><strong>@_appointments.Count(a => a.Status == AppointmentStatus.Done)</strong> done</span>
+        </p>
+    }
+</header>
 
 @if (_appointments is null)
 {
-    <p>Loading…</p>
+    <p class="text-muted">Loading…</p>
 }
 else if (_appointments.Count == 0)
 {
@@ -21,17 +31,17 @@ else if (_appointments.Count == 0)
 }
 else
 {
-    <table class="table table-striped align-middle" style="max-width: 50rem;">
+    <table class="table align-middle staff-table">
         <thead>
             <tr><th>Time</th><th>Patient</th><th>Phone</th><th>Status</th></tr>
         </thead>
         <tbody>
             @foreach (var a in _appointments)
             {
-                <tr>
+                <tr class="@(a.Status == AppointmentStatus.Done ? "row-done" : "")">
                     <td class="font-monospace">@Clinic.Local(a.StartsAt)</td>
-                    <td>@a.Patient.FullName</td>
-                    <td>@a.Patient.Phone</td>
+                    <td class="fw-bold">@a.Patient.FullName</td>
+                    <td class="font-monospace text-muted">@a.Patient.Phone</td>
                     <td><span class="badge @BadgeFor(a.Status)">@a.Status</span></td>
                 </tr>
             }

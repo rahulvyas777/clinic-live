@@ -363,6 +363,50 @@ main.page {
 .kiosk-position { font-size: 1.6rem; }
 .kiosk-position strong { font-size: 2.4rem; color: var(--primary); }
 
+/* ---------- staff surfaces (density with dignity) ---------- */
+.staff-head { display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4); }
+.staff-head h1 { margin: 0; }
+.staff-stats { margin: 0; color: var(--muted); display: flex; gap: var(--s-4); }
+.staff-stats strong { color: var(--ink); }
+.staff-card-label {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin-bottom: var(--s-1); font-weight: 700;
+}
+.staff-table { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.staff-table td, .staff-table th { padding-inline: var(--s-4); }
+.row-done td { opacity: 0.5; }
+
+/* chat */
+.chat { display: flex; gap: var(--s-5); max-width: 56rem; align-items: flex-start; }
+.chat-main { flex: 1; min-width: 0; }
+.chat-side { width: 10rem; }
+
+.chat-log {
+    height: 24rem; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); padding: var(--s-4);
+    display: flex; flex-direction: column; gap: var(--s-3);
+}
+.chat-msg { max-width: 85%; }
+.chat-msg.mine { align-self: flex-end; text-align: right; }
+.chat-meta { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 2px; }
+.chat-meta time { margin-left: var(--s-1); }
+.chat-bubble {
+    display: inline-block; text-align: left;
+    background: var(--surface-2); border-radius: var(--radius);
+    padding: var(--s-2) var(--s-3);
+}
+.chat-msg.mine .chat-bubble { background: var(--primary-soft); }
+.chat-typing { min-height: 1.3rem; color: var(--muted); font-size: 0.85rem; margin: var(--s-2) 0; }
+.chat-online { list-style: none; margin: 0; padding: 0; }
+.chat-online li { padding: var(--s-1) 0; }
+.chat-online span { color: var(--ok); margin-right: var(--s-1); }
+
+@media (max-width: 640px) {
+    .chat { flex-direction: column; }
+    .chat-side { width: auto; }
+}
+
 /* ---------- the board (signage) ----------
    A TV on a wall is not a web page. Its own fixed dark palette — the room's
    lighting doesn't follow anyone's OS theme — sized to be read from chairs. */

@@ -10,44 +10,54 @@
 
 <PageTitle>Queue — ClinicLive</PageTitle>
 
-<h1>Queue</h1>
+<header class="staff-head">
+    <h1>Queue</h1>
+    <p class="staff-stats">
+        <span class="stat"><strong>@(_snapshot?.Waiting.Count ?? 0)</strong> waiting</span>
+    </p>
+</header>
 
-<div class="row" style="max-width: 50rem;">
+<div class="row" style="max-width: 52rem;">
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title text-muted">Now serving</h5>
+                <p class="staff-card-label">Now serving</p>
                 <p class="fs-3 fw-bold mb-0">@(_snapshot?.NowServing?.DisplayName ?? "—")</p>
             </div>
         </div>
-        <button class="btn btn-primary btn-lg" @onclick="CallNextAsync" disabled="@_busy">
+        <button class="btn btn-primary btn-lg w-100" @onclick="CallNextAsync" disabled="@_busy">
             Call next patient
         </button>
         @if (_empty)
         {
-            <p class="text-muted mt-2">The queue is empty.</p>
+            <p class="text-muted mt-2">The queue is empty — nice work.</p>
         }
     </div>
     <div class="col-md-6">
-        <h5 class="text-muted">Waiting (@(_snapshot?.Waiting.Count ?? 0))</h5>
         @if (_snapshot is { Waiting.Count: > 0 })
         {
-            <table class="table table-sm align-middle">
-                <thead><tr><th>#</th><th>Patient</th><th>Slot</th><th>Checked in</th></tr></thead>
+            <table class="table table-sm align-middle staff-table">
+                <thead><tr><th>#</th><th>Patient</th><th>Slot</th><th>Waited</th></tr></thead>
                 <tbody>
                     @{ var n = 0; }
                     @foreach (var item in _snapshot.Waiting)
                     {
                         n++;
                         <tr>
-                            <td>@n</td>
-                            <td>@item.DisplayName</td>
+                            <td class="text-muted">@n</td>
+                            <td class="fw-bold">@item.DisplayName</td>
                             <td class="font-monospace">@Clinic.Local(item.SlotAt)</td>
-                            <td class="font-monospace">@Clinic.Local(item.CheckedInAt)</td>
+                            <td class="font-monospace @(WaitedMinutes(item) >= 20 ? "text-danger" : "text-muted")">
+                                @WaitedMinutes(item) min
+                            </td>
                         </tr>
                     }
                 </tbody>
             </table>
+        }
+        else
+        {
+            <p class="text-muted">No one is waiting right now.</p>
         }
     </div>
 </div>
@@ -84,6 +94,9 @@
         _empty = !called;
         _busy = false;
     }
+
+    private static int WaitedMinutes(QueueItem item) =>
+        Math.Max(0, (int)(DateTime.UtcNow - item.CheckedInAt).TotalMinutes);
 
     public async ValueTask DisposeAsync()
     {

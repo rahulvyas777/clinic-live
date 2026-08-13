@@ -9,22 +9,29 @@
 
 <PageTitle>Staff chat — ClinicLive</PageTitle>
 
-<h1>Staff chat</h1>
+<header class="staff-head">
+    <h1>Staff chat</h1>
+    <p class="staff-stats">
+        <span class="stat"><strong>@_online.Count</strong> online</span>
+    </p>
+</header>
 
-<div class="row" style="max-width: 56rem;">
-    <div class="col-md-9">
-        <div class="border rounded p-3 mb-2 overflow-auto" style="height: 24rem; background: var(--bs-light);">
+<div class="chat">
+    <div class="chat-main">
+        <div class="chat-log" aria-label="Messages">
             @foreach (var m in _messages)
             {
-                <div class="mb-2">
-                    <strong>@ShortName(m.SenderName)</strong>
-                    <span class="text-muted small">@m.SentAt.ToString("HH:mm")</span><br />
-                    @m.Body
+                <div class="chat-msg @(m.SenderName == _me ? "mine" : "")" @key="m">
+                    <span class="chat-meta">
+                        <strong>@ShortName(m.SenderName)</strong>
+                        <time>@m.SentAt.ToString("HH:mm")</time>
+                    </span>
+                    <span class="chat-bubble">@m.Body</span>
                 </div>
             }
         </div>
 
-        <p class="text-muted small mb-2" style="min-height: 1.2rem;">
+        <p class="chat-typing">
             @if (_typingOthers.Count > 0)
             {
                 @string.Join(", ", _typingOthers.Select(ShortName))
@@ -41,15 +48,15 @@
             </button>
         </div>
     </div>
-    <div class="col-md-3">
-        <h6 class="text-muted">Online</h6>
-        <ul class="list-unstyled">
+    <aside class="chat-side">
+        <p class="staff-card-label">Online</p>
+        <ul class="chat-online">
             @foreach (var user in _online)
             {
-                <li><span class="text-success">●</span> @ShortName(user)</li>
+                <li><span aria-hidden="true">●</span> @ShortName(user)</li>
             }
         </ul>
-    </div>
+    </aside>
 </div>
 
 @code {
