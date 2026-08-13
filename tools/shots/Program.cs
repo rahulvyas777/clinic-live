@@ -38,6 +38,26 @@ async Task Shot(IBrowserContext ctx, string path, string name, bool fullPage = f
 Console.WriteLine("public surfaces:");
 await Shot(desktop, "/", "home-desktop");
 await Shot(phone, "/book", "book-phone", fullPage: true);
+
+// --book "Full Name,+00-0000-0009" — complete a real booking and photograph the ticket
+var bookArg = Array.IndexOf(args, "--book") is var bi and >= 0 && bi < args.Length - 1 ? args[bi + 1] : null;
+if (bookArg is not null)
+{
+    var (name, phoneNo) = (bookArg.Split(',')[0], bookArg.Split(',')[1]);
+    Console.WriteLine($"booking for {name}:");
+    var bp = await phone.NewPageAsync();
+    await bp.GotoAsync($"{baseUrl}/book", new() { WaitUntil = WaitUntilState.NetworkIdle });
+    await bp.WaitForTimeoutAsync(600);
+    await bp.ClickAsync(".slot-btn >> nth=-1");           // last free slot of the day
+    await bp.FillAsync("#name", name);
+    await bp.FillAsync("#phone", phoneNo);
+    await bp.ClickAsync("button[type='submit']");
+    await bp.WaitForSelectorAsync(".ticket");
+    await bp.ScreenshotAsync(new() { Path = Path.Combine(outDir, "book-phone-ticket.png"), FullPage = true });
+    Console.WriteLine("  book-phone-ticket.png");
+    await bp.CloseAsync();
+}
+
 await Shot(phone, "/cancel", "cancel-phone");
 await Shot(tablet, "/kiosk", "kiosk-tablet");
 

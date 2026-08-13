@@ -302,6 +302,41 @@ main.page {
 .rounded { border-radius: var(--radius); }
 .p-3 { padding: var(--s-4); }
 
+/* ---------- booking (phone-first) ---------- */
+.book { max-width: 26rem; }
+
+.slot-section { margin-bottom: var(--s-4); }
+.slot-section > h2 {
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin-bottom: var(--s-2);
+}
+
+.slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+
+.slot-btn {
+    font: inherit; font-weight: 700; font-variant-numeric: tabular-nums;
+    padding: 0.7rem 0; border-radius: var(--radius);
+    border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+    cursor: pointer; transition: border-color 120ms ease, background 120ms ease;
+}
+.slot-btn:hover { border-color: var(--primary); }
+.slot-btn.selected {
+    background: var(--primary); border-color: var(--primary); color: var(--on-primary);
+}
+
+/* the confirmation "ticket" — worth photographing, it IS the product */
+.ticket {
+    background: var(--surface); border: 2px dashed var(--primary);
+    border-radius: var(--radius-lg); padding: var(--s-5);
+    text-align: center; margin: var(--s-4) 0;
+}
+.ticket-when { font-weight: 700; font-size: 1.1rem; margin-bottom: var(--s-3); }
+.ticket-code {
+    font-family: var(--mono); font-size: 2.6rem; font-weight: 700;
+    letter-spacing: 0.18em; color: var(--primary); margin: var(--s-2) 0;
+}
+.ticket-hint { color: var(--muted); font-size: 0.9rem; margin-bottom: 0; }
+
 /* ---------- Blazor plumbing ----------
    The template's stylesheet quietly carried `#blazor-error-ui { display:none }`.
    Delete the template CSS and the "hidden" error banner greets every visitor —

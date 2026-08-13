@@ -6,87 +6,95 @@
 
 <PageTitle>Book an appointment — ClinicLive</PageTitle>
 
-<h1>Book an appointment</h1>
+<div class="book">
+    <h1>Book an appointment</h1>
 
-@if (_confirmed is not null)
-{
-    <div class="alert alert-success mt-3" role="alert">
-        <h4 class="alert-heading">You're booked! ✅</h4>
-        <p>
-            @_confirmed.Patient.FullName —
-            <strong>@Clinic.Local(_confirmed.StartsAt, "dddd d MMMM, HH:mm")</strong>
-        </p>
-        <hr />
-        <p class="mb-0">
-            Your confirmation code is
-            <span class="fs-2 fw-bold font-monospace">@_confirmed.ConfirmationCode</span>
-        </p>
-        <p class="text-muted">Bring it to the kiosk to check in. You can also cancel with it.</p>
-    </div>
-    <button class="btn btn-outline-primary" @onclick="Reset">Book another</button>
-}
-else
-{
-    <div class="mb-3 mt-3" style="max-width: 22rem;">
-        <label class="form-label" for="date">Day</label>
-        <InputDate id="date" class="form-control" @bind-Value="_date" @bind-Value:after="LoadSlotsAsync" />
-    </div>
+    @if (_confirmed is not null)
+    {
+        <p class="lead">You're booked, @FirstName(_confirmed.Patient.FullName). 🎉</p>
 
-    @if (_loading)
-    {
-        <p>Loading free slots…</p>
-    }
-    else if (_slots.Count == 0)
-    {
-        <p class="text-muted">No free slots on that day — try another date.</p>
+        <div class="ticket">
+            <div class="ticket-when">@Clinic.Local(_confirmed.StartsAt, "dddd d MMMM · HH:mm")</div>
+            <div class="ticket-code">@_confirmed.ConfirmationCode</div>
+            <p class="ticket-hint">
+                Your check-in code. Type it at the kiosk when you arrive —
+                it's also all you need to <a href="/cancel">cancel</a>.
+            </p>
+        </div>
+
+        <button class="btn btn-outline-primary" @onclick="Reset">Book another appointment</button>
     }
     else
     {
-        <div class="d-flex flex-wrap gap-2 mb-4" style="max-width: 40rem;">
-            @foreach (var slot in _slots)
-            {
-                <button class="btn @(slot == _selected ? "btn-primary" : "btn-outline-secondary")"
-                        @onclick="() => _selected = slot">
-                    @Clinic.Local(slot)
-                </button>
-            }
+        <p class="text-muted">Pick a day and a time — no account, no password, under a minute.</p>
+
+        <div class="mb-3">
+            <label class="form-label" for="date">Day</label>
+            <InputDate id="date" class="form-control" @bind-Value="_date" @bind-Value:after="LoadSlotsAsync" />
         </div>
-    }
 
-    @if (_selected is not null)
-    {
-        <EditForm Model="_form" OnValidSubmit="SubmitAsync" FormName="book">
-            <DataAnnotationsValidator />
-            <div class="mb-3" style="max-width: 22rem;">
-                <label class="form-label" for="name">Full name</label>
-                <InputText id="name" class="form-control" @bind-Value="_form.FullName" />
-                <ValidationMessage For="() => _form.FullName" />
+        @if (_loading)
+        {
+            <p class="text-muted">Checking the calendar…</p>
+        }
+        else if (_slots.Count == 0)
+        {
+            <div class="alert">
+                Nothing free on that day. Try the next one — mornings fill up first.
             </div>
-            <div class="mb-3" style="max-width: 22rem;">
-                <label class="form-label" for="phone">Phone</label>
-                <InputText id="phone" class="form-control" @bind-Value="_form.Phone" />
-                <ValidationMessage For="() => _form.Phone" />
-            </div>
-            <div class="mb-3" style="max-width: 22rem;">
-                <label class="form-label" for="email">Email (optional)</label>
-                <InputText id="email" class="form-control" @bind-Value="_form.Email" />
-            </div>
-            <button type="submit" class="btn btn-primary" disabled="@_saving">
-                Book @(_selected is { } s ? Clinic.Local(s) : "")
-            </button>
-        </EditForm>
-    }
+        }
+        else
+        {
+            foreach (var group in SlotGroups())
+            {
+                <section class="slot-section">
+                    <h2>@group.Label</h2>
+                    <div class="slot-grid">
+                        @foreach (var slot in group.Slots)
+                        {
+                            <button class="slot-btn @(slot == _selected ? "selected" : "")"
+                                    @onclick="() => _selected = slot">
+                                @Clinic.Local(slot)
+                            </button>
+                        }
+                    </div>
+                </section>
+            }
+        }
 
-    @if (_error is not null)
-    {
-        <div class="alert alert-warning mt-3">@_error</div>
+        @if (_selected is not null)
+        {
+            <EditForm Model="_form" OnValidSubmit="SubmitAsync" FormName="book">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label" for="name">Full name</label>
+                    <InputText id="name" class="form-control" autocomplete="name" @bind-Value="_form.FullName" />
+                    <ValidationMessage For="() => _form.FullName" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="phone">Phone</label>
+                    <InputText id="phone" class="form-control" type="tel" autocomplete="tel" @bind-Value="_form.Phone" />
+                    <ValidationMessage For="() => _form.Phone" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email <span class="text-muted">(optional)</span></label>
+                    <InputText id="email" class="form-control" type="email" autocomplete="email" @bind-Value="_form.Email" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@_saving">
+                    @(_saving ? "Booking…" : $"Book {Clinic.Local(_selected.Value)}")
+                </button>
+            </EditForm>
+        }
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-warning mt-3">@_error</div>
+        }
     }
-}
+</div>
 
 @code {
     private DateOnly _date;
-
-    protected override void OnInitialized() => _date = Clinic.Today;
     private List<DateTime> _slots = [];
     private DateTime? _selected;
     private bool _loading = true;
@@ -94,6 +102,8 @@ else
     private string? _error;
     private ClinicLive.Domain.Appointment? _confirmed;
     private BookForm _form = new();
+
+    protected override void OnInitialized() => _date = Clinic.Today;
 
     protected override Task OnInitializedAsync() => LoadSlotsAsync();
 
@@ -103,6 +113,14 @@ else
         _selected = null;
         _slots = await Booking.GetFreeSlotsAsync(_date);
         _loading = false;
+    }
+
+    private IEnumerable<(string Label, List<DateTime> Slots)> SlotGroups()
+    {
+        var morning = _slots.Where(s => int.Parse(Clinic.Local(s, "HH")) < 12).ToList();
+        var afternoon = _slots.Except(morning).ToList();
+        if (morning.Count > 0) yield return ("Morning", morning);
+        if (afternoon.Count > 0) yield return ("Afternoon", afternoon);
     }
 
     private async Task SubmitAsync()
@@ -135,6 +153,8 @@ else
         await LoadSlotsAsync();
     }
 
+    private static string FirstName(string full) => full.Split(' ')[0];
+
     private sealed class BookForm
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "We need a name for the appointment.")]
@@ -145,7 +165,7 @@ else
         [System.ComponentModel.DataAnnotations.StringLength(30)]
         public string? Phone { get; set; }
 
-        [System.ComponentModel.DataAnnotations.EmailAddress]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "That email doesn't look right — or leave it empty.")]
         [System.ComponentModel.DataAnnotations.StringLength(200)]
         public string? Email { get; set; }
     }
