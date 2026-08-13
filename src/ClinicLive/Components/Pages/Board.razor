@@ -5,53 +5,70 @@
 @using ClinicLive.Services
 @using Microsoft.AspNetCore.SignalR.Client
 @inject QueueService Queue
+@inject ClinicTime Clinic
 @inject NavigationManager Navigation
 
 <PageTitle>Waiting room — ClinicLive</PageTitle>
 
-<div class="text-center mt-4">
-    <h1 class="display-6 text-muted">Waiting room</h1>
+<div class="board">
+    <header class="board-top">
+        <span class="board-brand">Clinic<span>Live</span></span>
+        <time class="board-clock">@Clinic.Local(DateTime.UtcNow)</time>
+    </header>
 
-    @if (_snapshot?.NowServing is { } serving)
-    {
-        <div class="my-5">
-            <div class="text-muted fs-4">Now serving</div>
-            <div class="display-1 fw-bold">@serving.DisplayName</div>
-        </div>
-    }
-    else
-    {
-        <div class="my-5 text-muted fs-3">The next patient will be called shortly…</div>
-    }
+    <section class="board-serving">
+        <p class="board-label">Now serving</p>
+        @if (_snapshot?.NowServing is { } serving)
+        {
+            <p class="board-name" @key="serving.AppointmentId">@serving.DisplayName</p>
+        }
+        else
+        {
+            <p class="board-name board-name-idle">—</p>
+        }
+    </section>
 
-    <h2 class="fs-4 text-muted">Up next</h2>
-    @if (_snapshot is null || _snapshot.Waiting.Count == 0)
-    {
-        <p class="text-muted">No one is waiting.</p>
-    }
-    else
-    {
-        <ol class="list-group list-group-numbered mx-auto" style="max-width: 24rem;">
-            @foreach (var item in _snapshot.Waiting)
+    <section class="board-next">
+        <p class="board-label">Up next</p>
+        @if (_snapshot is null || _snapshot.Waiting.Count == 0)
+        {
+            <p class="board-empty">No one is waiting</p>
+        }
+        else
+        {
+            <ol class="board-list">
+                @foreach (var item in _snapshot.Waiting.Take(5))
+                {
+                    <li @key="item.AppointmentId">@item.DisplayName</li>
+                }
+            </ol>
+            @if (_snapshot.Waiting.Count > 5)
             {
-                <li class="list-group-item fs-4">@item.DisplayName</li>
+                <p class="board-empty">+ @(_snapshot.Waiting.Count - 5) more</p>
             }
-        </ol>
-    }
+        }
+    </section>
 
-    <p class="mt-4 small @(_connected ? "text-success" : "text-danger")">
-        ● @(_connected ? "live" : "reconnecting…")
-    </p>
+    @if (!_connected)
+    {
+        <div class="board-status">reconnecting…</div>
+    }
 </div>
 
 @code {
     private QueueSnapshot? _snapshot;
     private HubConnection? _hub;
     private bool _connected;
+    private System.Timers.Timer? _clock;
 
     protected override async Task OnInitializedAsync()
     {
         _snapshot = await Queue.GetSnapshotAsync();
+
+        // a wall clock that actually ticks
+        _clock = new System.Timers.Timer(TimeSpan.FromSeconds(20));
+        _clock.Elapsed += (_, _) => _ = InvokeAsync(StateHasChanged);
+        _clock.Start();
 
         _hub = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/queue"))
@@ -67,10 +84,16 @@
         _hub.Reconnected += async _ =>
         {
             await _hub.InvokeAsync(nameof(ClinicLive.Hubs.QueueHub.JoinBoard));
+            _snapshot = await Queue.GetSnapshotAsync();
             _connected = true;
             await InvokeAsync(StateHasChanged);
         };
         _hub.Closed += async _ =>
+        {
+            _connected = false;
+            await InvokeAsync(StateHasChanged);
+        };
+        _hub.Reconnecting += async _ =>
         {
             _connected = false;
             await InvokeAsync(StateHasChanged);
@@ -83,6 +106,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _clock?.Dispose();
         if (_hub is not null)
         {
             await _hub.DisposeAsync();

@@ -162,7 +162,8 @@ main.page {
 }
 
 /* appliance surfaces (kiosk, board) render chrome-free via BareLayout */
-.appliance { min-height: 100dvh; display: grid; place-items: center; padding: var(--s-5); }
+.appliance { min-height: 100dvh; display: grid; place-items: center; }
+.appliance .kiosk { padding: var(--s-5); }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -361,6 +362,55 @@ main.page {
 .kiosk-success h1 { color: var(--ok); font-size: 3.2rem; }
 .kiosk-position { font-size: 1.6rem; }
 .kiosk-position strong { font-size: 2.4rem; color: var(--primary); }
+
+/* ---------- the board (signage) ----------
+   A TV on a wall is not a web page. Its own fixed dark palette — the room's
+   lighting doesn't follow anyone's OS theme — sized to be read from chairs. */
+.board {
+    width: 100%; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center;
+    background: #0E1B1E; color: #E9F2F1;
+    padding: 3vmin 4vmin;
+}
+
+.board-top {
+    width: 100%; display: flex; justify-content: space-between; align-items: baseline;
+    color: #7FA7A3;
+}
+.board-brand { font-weight: 700; font-size: 2.2vmin; letter-spacing: 0.02em; }
+.board-brand span { color: #63C7CC; }
+.board-clock { font-family: var(--mono); font-size: 2.6vmin; font-variant-numeric: tabular-nums; }
+
+.board-label {
+    text-transform: uppercase; letter-spacing: 0.14em;
+    font-size: 2.2vmin; color: #7FA7A3; margin: 0 0 1vmin;
+}
+
+.board-serving { text-align: center; margin-top: 7vmin; }
+.board-name {
+    font-size: 13vmin; font-weight: 700; line-height: 1.05;
+    color: #63C7CC; margin: 0;
+}
+.board-name-idle { color: #2A4247; }
+
+.board-next { text-align: center; margin-top: 7vmin; }
+.board-list {
+    list-style: none; margin: 0; padding: 0;
+    font-size: 5vmin; font-weight: 700; line-height: 1.6;
+    counter-reset: up-next;
+}
+.board-list li::before {
+    counter-increment: up-next; content: counter(up-next);
+    display: inline-block; min-width: 1.6em; margin-right: 0.4em;
+    color: #7FA7A3; font-variant-numeric: tabular-nums; text-align: right;
+}
+.board-empty { color: #7FA7A3; font-size: 3vmin; }
+
+.board-status {
+    position: fixed; bottom: 2vmin; right: 2vmin;
+    background: var(--warn); color: #fff; font-size: 1.8vmin;
+    padding: 0.5em 1em; border-radius: 999px;
+}
 
 /* ---------- Blazor plumbing ----------
    The template's stylesheet quietly carried `#blazor-error-ui { display:none }`.
