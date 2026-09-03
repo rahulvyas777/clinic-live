@@ -11,8 +11,26 @@ namespace ClinicLive.Pocket.Services;
 /// </summary>
 public sealed partial class Notifier
 {
-    private const string ChannelId = "queue";
+    public const string ChannelId = "queue";
     private static int _nextId;
+
+    /// <summary>
+    /// Idempotent. Called at startup too (MainActivity), because a push delivered while
+    /// the app is closed is shown by Android on THIS channel — it has to exist already.
+    /// </summary>
+    public static void EnsureChannel()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            return;
+        }
+        var context = Android.App.Application.Context;
+        var manager = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
+        manager.CreateNotificationChannel(new NotificationChannel(ChannelId, "Queue updates", NotificationImportance.High)
+        {
+            Description = "When you're next, and when it's your turn",
+        });
+    }
 
     public partial async Task<bool> RequestPermissionAsync()
     {
@@ -27,17 +45,9 @@ public sealed partial class Notifier
 
     public partial Task ShowAsync(string title, string body)
     {
+        EnsureChannel();
         var context = Android.App.Application.Context;
         var manager = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
-
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
-        {
-            // Idempotent: creating an existing channel is a no-op. HIGH so it heads-up.
-            manager.CreateNotificationChannel(new NotificationChannel(ChannelId, "Queue updates", NotificationImportance.High)
-            {
-                Description = "When you're next, and when it's your turn",
-            });
-        }
 
         // Tapping the notification brings the app to the front.
         var launch = context.PackageManager!.GetLaunchIntentForPackage(context.PackageName!);

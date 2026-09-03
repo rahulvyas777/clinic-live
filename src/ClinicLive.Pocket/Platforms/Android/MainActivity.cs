@@ -13,6 +13,9 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
 
+        // Part 6: the channel must exist BEFORE a push arrives while the app is closed.
+        Services.Notifier.EnsureChannel();
+
         // The first screenshot: our header sat BEHIND the status bar and the tab labels
         // BEHIND the gesture bar. Android hands the WebView the whole screen, and CSS's
         // env(safe-area-inset-*) reads 0 inside a WebView — so the insets have to be

@@ -1,3 +1,4 @@
+using ClinicLive.Contracts;
 using ClinicLive.Services;
 
 namespace ClinicLive.Api;
@@ -29,6 +30,12 @@ public static class PocketEndpoints
         });
 
         api.MapGet("/queue", (PocketService pocket) => pocket.GetQueueAsync());
+
+        // Part 6: "this phone wants to hear about this visit".
+        api.MapPost("/visits/{code}/device", async (string code, DeviceRegistrationRequest request, PocketService pocket) =>
+            await pocket.RegisterDeviceAsync(code, request.Platform, request.Token)
+                ? Results.NoContent()
+                : Results.NotFound(new { error = "No visit found for that code." }));
 
         return app;
     }

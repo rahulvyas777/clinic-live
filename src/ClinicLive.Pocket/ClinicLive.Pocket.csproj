@@ -54,6 +54,19 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>
 
+  <!-- Part 6: Firebase Cloud Messaging, Android only. google-services.json is the
+       Firebase project's config for THIS package name; it's git-ignored — copy yours
+       from the Firebase console into Platforms/Android (see docs/pocket.md). -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <PackageReference Include="Xamarin.Firebase.Messaging" Version="125.1.1.1" />
+    <PackageReference Include="Xamarin.GooglePlayServices.Basement" Version="118.10.0.3" />
+    <!-- Firebase pulls fragment-ktx 1.8.8, MAUI 10 ships fragment 1.9.0, and 1.9 moved
+         FragmentKt into the base package — D8 then sees it twice ("defined multiple
+         times"). Pinning ktx to the same 1.9.0 makes them agree. -->
+    <PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
+    <GoogleServicesJson Include="Platforms\Android\google-services.json" Condition="Exists('Platforms\Android\google-services.json')" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ClinicLive.Pocket.Shared\ClinicLive.Pocket.Shared.csproj" />
   </ItemGroup>

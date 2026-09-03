@@ -12,7 +12,7 @@ public sealed record QueueSnapshot(QueueItem? NowServing, List<QueueItem> Waitin
 
 public sealed record CheckInResult(bool Success, string? Error = null, int Position = 0);
 
-public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<QueueHub> hub, ClinicTime clinic)
+public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<QueueHub> hub, ClinicTime clinic, IPushSender push)
 {
     public async Task<CheckInResult> CheckInAsync(string confirmationCode)
     {
@@ -92,7 +92,7 @@ public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHu
         }
 
         var next = await db.QueueEntries
-            .Include(q => q.Appointment)
+            .Include(q => q.Appointment).ThenInclude(a => a.Patient)
             .Where(q => q.CalledAt == null && q.Appointment.Status == AppointmentStatus.CheckedIn)
             .OrderBy(q => q.Appointment.StartsAt)
             .ThenBy(q => q.CheckedInAt)
@@ -110,11 +110,47 @@ public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHu
         await db.SaveChangesAsync();
 
         await BroadcastChangeAsync();
+
+        // Season 3: reach the phones that aren't on this screen. The person just
+        // called, and whoever is now first in line (once — hence NextNotifiedAt).
+        await PushToAsync(db, next.AppointmentId, "It's your turn",
+            $"{FirstNameOf(next.Appointment.Patient.FullName)}, please go through now.");
+
+        var upNext = await db.QueueEntries
+            .Include(q => q.Appointment)
+            .Where(q => q.CalledAt == null && q.Appointment.Status == AppointmentStatus.CheckedIn)
+            .OrderBy(q => q.Appointment.StartsAt)
+            .ThenBy(q => q.CheckedInAt)
+            .FirstOrDefaultAsync();
+
+        if (upNext is not null && upNext.NextNotifiedAt is null)
+        {
+            await PushToAsync(db, upNext.AppointmentId, "You're next", "Get ready — you're first in the queue.");
+            upNext.NextNotifiedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
         return true;
+    }
+
+    private async Task PushToAsync(ApplicationDbContext db, long appointmentId, string title, string body)
+    {
+        var tokens = await db.DeviceRegistrations
+            .Where(d => d.AppointmentId == appointmentId)
+            .Select(d => d.Token)
+            .ToListAsync();
+
+        await push.SendAsync(tokens, title, body, new Dictionary<string, string>
+        {
+            ["appointmentId"] = appointmentId.ToString(),
+        });
     }
 
     private Task BroadcastChangeAsync() =>
         hub.Clients.Group(QueueHub.BoardGroup).SendAsync("QueueChanged");
+
+    private static string FirstNameOf(string fullName) =>
+        fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? fullName;
 
     /// <summary>The waiting-room board is public — first name and last initial only.</summary>
     private static QueueItem ToItem(QueueEntry q)

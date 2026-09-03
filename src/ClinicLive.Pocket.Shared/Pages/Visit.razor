@@ -5,6 +5,8 @@
 @inject QueueLive Live
 @inject IHaptics Haptics
 @inject INotifier Notifier
+@inject IPushRegistration Push
+@inject IAppLifecycle Lifecycle
 
 <PageTitle>My visit — ClinicLive Pocket</PageTitle>
 
@@ -84,9 +86,17 @@ else
                         <text> Now serving <strong>@_visit.NowServing</strong></text>
                     }
                 </p>
-                @if (_notifications == false)
+                @if (_pushRegistered)
+                {
+                    <p class="muted small">Push is on — you can close the app and we'll still reach you.</p>
+                }
+                else if (_notifications == false)
                 {
                     <p class="muted small">Notifications are off, so keep this screen open — it still updates live.</p>
+                }
+                else if (Push.Platform is null)
+                {
+                    <p class="muted small">Keep this screen open — it updates live.</p>
                 }
                 break;
 
@@ -121,6 +131,8 @@ else
     private bool _busy;
     private bool _connected;
     private bool? _notifications;   // null = never asked
+    private bool _pushRegistered;
+    private bool _skipNextNudge;    // the push already told them while we were away
     private string? _checkInError;
 
     protected override async Task OnInitializedAsync()
@@ -128,6 +140,7 @@ else
         // The hub is app-wide; this screen just listens while it's on screen.
         Live.Changed += OnQueueChanged;
         Live.ConnectionChanged += OnConnectionChanged;
+        Lifecycle.Resumed += OnResumed;
         await Live.EnsureStartedAsync();
         _connected = Live.IsConnected;
     }
@@ -149,8 +162,19 @@ else
         StateHasChanged();
     });
 
+    // Coming back from the background: whatever changed while we were away, the
+    // push notification (Part 6) already said it. Don't say it twice.
+    private void OnResumed() => _skipNextNudge = _pushRegistered;
+
+    // Loads are serialised. The check-in button and the hub's QueueChanged fire
+    // within milliseconds of each other; two concurrent loads both captured the
+    // pre-check-in state as "before" and BOTH nudged — the shade showed two
+    // identical "You're next" notifications. One load at a time, in order.
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
+
     private async Task LoadAsync()
     {
+        await _loadGate.WaitAsync();
         _loading = true;
         _unreachable = false;
         try
@@ -159,7 +183,21 @@ else
             _visit = await Api.GetVisitAsync(Code!);
             if (before is not null && _visit is not null)
             {
-                await NudgeIfItMattersAsync(before, _visit);
+                if (_skipNextNudge)
+                {
+                    _skipNextNudge = false;
+                }
+                else
+                {
+                    await NudgeIfItMattersAsync(before, _visit);
+                }
+            }
+
+            // A phone that shows a checked-in visit should be reachable when the app
+            // is closed. Idempotent on the server, so calling it on every load is fine.
+            if (_visit is { Status: VisitStatus.CheckedIn } && !_pushRegistered)
+            {
+                await RegisterForPushAsync();
             }
         }
         catch (ClinicUnreachableException)
@@ -169,6 +207,20 @@ else
         finally
         {
             _loading = false;
+            _loadGate.Release();
+        }
+    }
+
+    private async Task RegisterForPushAsync()
+    {
+        if (Push.Platform is null)
+        {
+            return;   // this host has no push — Windows, the browser, iOS-not-built-here
+        }
+        var token = await Push.GetTokenAsync();
+        if (token is not null)
+        {
+            _pushRegistered = await Api.RegisterDeviceAsync(Code!, Push.Platform, token);
         }
     }
 
@@ -225,6 +277,7 @@ else
     {
         Live.Changed -= OnQueueChanged;
         Live.ConnectionChanged -= OnConnectionChanged;
+        Lifecycle.Resumed -= OnResumed;
     }
 
     private static string StatusLabel(VisitStatus s) => s switch

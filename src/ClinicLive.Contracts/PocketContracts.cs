@@ -47,5 +47,8 @@ public sealed record VisitDto(
 
 public sealed record CheckInResponse(bool Success, string? Error, int Position);
 
+/// <summary>"This phone belongs to this visit": a push token, so the clinic can reach the patient when the app is closed.</summary>
+public sealed record DeviceRegistrationRequest(string Platform, string Token);
+
 /// <summary>The public waiting-room board, exactly what the wall TV shows (names masked).</summary>
 public sealed record QueueDto(string? NowServing, IReadOnlyList<string> Waiting);

@@ -53,6 +53,21 @@ builder.Services.AddSingleton<ClinicLive.Services.ChatRoom>();
 builder.Services.AddScoped<ClinicLive.Services.PocketService>();
 builder.Services.AddSignalR();
 
+// Push notifications (season three, Part 6). Configured = a Firebase service-account
+// file OUTSIDE the repo (user-secrets locally, server config in production).
+// Unconfigured = NullPushSender, which logs what it would have sent. Same app,
+// same tests, no key required to run it.
+var serviceAccountPath = builder.Configuration["Push:ServiceAccountPath"];
+if (!string.IsNullOrWhiteSpace(serviceAccountPath) && File.Exists(serviceAccountPath))
+{
+    builder.Services.AddSingleton<ClinicLive.Services.IPushSender>(sp =>
+        new ClinicLive.Services.FcmPushSender(serviceAccountPath, sp.GetRequiredService<ILogger<ClinicLive.Services.FcmPushSender>>()));
+}
+else
+{
+    builder.Services.AddSingleton<ClinicLive.Services.IPushSender, ClinicLive.Services.NullPushSender>();
+}
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

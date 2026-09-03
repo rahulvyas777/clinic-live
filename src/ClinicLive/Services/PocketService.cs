@@ -77,6 +77,47 @@ public class PocketService(
         return new CheckInResponse(result.Success, result.Error, result.Position);
     }
 
+    /// <summary>
+    /// Attach a phone to a visit. Upsert by token: the same phone re-registering for a
+    /// later appointment moves, and a token the clinic has never seen is simply added.
+    /// Returns false when the code is unknown.
+    /// </summary>
+    public async Task<bool> RegisterDeviceAsync(string code, string platform, string token)
+    {
+        code = code.Trim().ToUpperInvariant();
+        token = token.Trim();
+        if (token.Length is 0 or > 512)
+        {
+            return false;
+        }
+
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var appointment = await db.Appointments.FirstOrDefaultAsync(a => a.ConfirmationCode == code);
+        if (appointment is null)
+        {
+            return false;
+        }
+
+        var existing = await db.DeviceRegistrations.FirstOrDefaultAsync(d => d.Token == token);
+        if (existing is null)
+        {
+            db.DeviceRegistrations.Add(new DeviceRegistration
+            {
+                AppointmentId = appointment.Id,
+                Platform = platform.Trim().ToLowerInvariant(),
+                Token = token,
+            });
+        }
+        else
+        {
+            existing.AppointmentId = appointment.Id;
+            existing.CreatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync();
+        return true;
+    }
+
     /// <summary>What the waiting-room TV shows: masked names only.</summary>
     public async Task<QueueDto> GetQueueAsync()
     {

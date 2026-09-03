@@ -55,7 +55,7 @@ public class BookingServiceTests(PostgresFixture fx)
 [Collection("postgres")]
 public class QueueServiceTests(PostgresFixture fx)
 {
-    private QueueService NewService() => new(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime);
+    private QueueService NewService() => new(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime, new FakePushSender());
 
     [Fact]
     public async Task Check_in_marks_the_appointment_and_joins_the_queue()

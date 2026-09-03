@@ -9,4 +9,7 @@ public class QueueEntry
 
     public DateTime CheckedInAt { get; set; } = DateTime.UtcNow;
     public DateTime? CalledAt { get; set; }
+
+    /// <summary>When the "you're next" push went out — once per visit, never again.</summary>
+    public DateTime? NextNotifiedAt { get; set; }
 }

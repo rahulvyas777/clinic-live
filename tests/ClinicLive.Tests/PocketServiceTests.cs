@@ -1,5 +1,6 @@
 using ClinicLive.Contracts;
 using ClinicLive.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace ClinicLive.Tests;
@@ -7,10 +8,51 @@ namespace ClinicLive.Tests;
 [Collection("postgres")]
 public class PocketServiceTests(PostgresFixture fx)
 {
-    private QueueService Queue() => new(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime);
+    private QueueService Queue(IPushSender? push = null) => new(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime, push ?? new FakePushSender());
 
-    private PocketService NewService() =>
-        new(fx.DbFactory, Queue(), fx.ClinicTime, new ConfigurationBuilder().Build());
+    private PocketService NewService(IPushSender? push = null) =>
+        new(fx.DbFactory, Queue(push), fx.ClinicTime, new ConfigurationBuilder().Build());
+
+    [Fact]
+    public async Task Calling_next_pushes_to_the_registered_phone_and_warns_whoever_is_next()
+    {
+        // Two patients late in the day so nothing else in the collection can be ahead of them.
+        var booking = new BookingService(fx.DbFactory, fx.ClinicTime);
+        var first = await booking.BookAsync("Test Patient M", "+00-1111-0013", null, DateTime.UtcNow.Date.AddHours(16));
+        var second = await booking.BookAsync("Test Patient N", "+00-1111-0014", null, DateTime.UtcNow.Date.AddHours(16).AddMinutes(15));
+
+        var push = new FakePushSender();
+        var service = NewService(push);
+        var queue = Queue(push);
+
+        Assert.True(await service.RegisterDeviceAsync(first.Appointment!.ConfirmationCode, "android", "token-for-M"));
+        Assert.True(await service.RegisterDeviceAsync(second.Appointment!.ConfirmationCode, "android", "token-for-N"));
+        await queue.CheckInAsync(first.Appointment.ConfirmationCode);
+        await queue.CheckInAsync(second.Appointment.ConfirmationCode);
+
+        // Drain anyone earlier tests left waiting, then call M.
+        while (true)
+        {
+            push.Sent.Clear();
+            Assert.True(await queue.CallNextAsync());
+            var serving = (await queue.GetSnapshotAsync()).NowServing;
+            if (serving?.AppointmentId == first.Appointment.Id) break;
+        }
+
+        Assert.Contains(push.Sent, s => s.Title == "It's your turn" && s.Tokens.Contains("token-for-M") && s.Body.StartsWith("Test,"));
+        Assert.Contains(push.Sent, s => s.Title == "You're next" && s.Tokens.Contains("token-for-N"));
+
+        // Same phone, new appointment: the token MOVES (unique index), it isn't duplicated.
+        Assert.True(await service.RegisterDeviceAsync(second.Appointment.ConfirmationCode, "android", "token-for-M"));
+        await using var db = await fx.DbFactory.CreateDbContextAsync();
+        Assert.Equal(1, await db.DeviceRegistrations.CountAsync(d => d.Token == "token-for-M"));
+    }
+
+    [Fact]
+    public async Task Registering_a_device_for_an_unknown_code_is_refused()
+    {
+        Assert.False(await NewService().RegisterDeviceAsync("ZZZZZZ", "android", "some-token"));
+    }
 
     [Fact]
     public async Task Unknown_code_is_null_not_an_exception()

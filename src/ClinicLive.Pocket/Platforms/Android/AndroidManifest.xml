@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"
-                 android:networkSecurityConfig="@xml/network_security_config"></application>
+                 android:networkSecurityConfig="@xml/network_security_config">
+        <!-- Part 6: when Android shows a push itself (app in background), use OUR
+             channel and icon rather than Firebase's defaults. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="queue" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@mipmap/appicon" />
+    </application>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Part 5: the attention buzz, and Android 13's runtime notification permission -->

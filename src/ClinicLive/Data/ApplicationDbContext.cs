@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<QueueEntry> QueueEntries => Set<QueueEntry>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -62,6 +63,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(m => m.SenderName).HasMaxLength(100);
             e.Property(m => m.Body).HasMaxLength(2000);
             e.HasIndex(m => m.SentAt);
+        });
+
+        builder.Entity<DeviceRegistration>(e =>
+        {
+            e.Property(d => d.Platform).HasMaxLength(20);
+            e.Property(d => d.Token).HasMaxLength(512);
+            // One token belongs to one visit at a time: re-registering the same phone
+            // for a new appointment moves it, it doesn't duplicate it.
+            e.HasIndex(d => d.Token).IsUnique();
+            e.HasIndex(d => d.AppointmentId);
+            e.HasOne(d => d.Appointment).WithMany().OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -39,6 +39,16 @@ public sealed class PocketApi(HttpClient http)
                    ?? new CheckInResponse(false, "The clinic sent an empty reply.", 0);
         })!;
 
+    /// <summary>Attach this device's push token to a visit. False when the code is unknown.</summary>
+    public Task<bool> RegisterDeviceAsync(string code, string platform, string token, CancellationToken ct = default) =>
+        Guard(async () =>
+        {
+            using var response = await http.PostAsJsonAsync(
+                $"api/pocket/visits/{Uri.EscapeDataString(code.Trim())}/device",
+                new DeviceRegistrationRequest(platform, token), ct);
+            return response.IsSuccessStatusCode;
+        });
+
     public Task<QueueDto?> GetQueueAsync(CancellationToken ct = default) =>
         Guard(() => http.GetFromJsonAsync<QueueDto>("api/pocket/queue", ct));
 
