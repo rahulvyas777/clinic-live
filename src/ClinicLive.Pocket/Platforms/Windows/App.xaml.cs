@@ -15,9 +15,12 @@ public partial class App : MauiWinUIApplication
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Unpackaged apps must register for notifications BEFORE the first window
-        // exists — registering lazily "works" (no exception, Setting == Enabled) and
-        // then Show() quietly displays nothing. Part 5's screenshot proved it.
+        // Register for notifications before the first window exists, as the docs
+        // ask. Honest status (Part 5, unchanged through Part 11): this did NOT make
+        // toasts appear. Registration succeeds, Setting == Enabled, Show() returns —
+        // and no banner is displayed. The cause is app identity: this build is
+        // unpackaged (no MSIX, no shortcut AUMID). See docs/pocket.md, "Windows —
+        // self-contained, unpackaged".
         AppNotificationManager.Default.Register();
 
         base.OnLaunched(args);
