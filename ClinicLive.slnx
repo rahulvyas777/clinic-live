@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/ClinicLive/ClinicLive.csproj" />
+    <Project Path="src/ClinicLive.Contracts/ClinicLive.Contracts.csproj" />
+    <Project Path="src/ClinicLive.Pocket.Shared/ClinicLive.Pocket.Shared.csproj" />
+    <Project Path="src/ClinicLive.Pocket/ClinicLive.Pocket.csproj" />
+    <Project Path="src/ClinicLive.Pocket.Web/ClinicLive.Pocket.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ClinicLive.Tests/ClinicLive.Tests.csproj" />

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The wire contract between ClinicLive's public API and the Pocket app.
+       Deliberately tiny and dependency-free: the phone shares the SHAPE of the
+       data with the server, never the server's code. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

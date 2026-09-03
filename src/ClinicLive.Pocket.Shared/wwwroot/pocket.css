@@ -1,0 +1,246 @@
+/* ============================================================
+   ClinicLive Pocket — the same "porcelain & petrol" tokens as the
+   clinic's web app (From Prompt to Polish, Part 2), re-tuned for a
+   phone held in one hand.
+
+   Rules of the house, unchanged:
+   - Every color, size and radius is a token.
+   - Light and dark are the same system; components don't change.
+   - One difference from the web app: the TYPE is the platform's own
+     (Roboto on Android, Segoe on Windows). A native app that ships a
+     web font feels like a website in a trench coat.
+   ============================================================ */
+
+/* ---------- tokens ---------- */
+:root {
+    --bg: #F5F8F8;
+    --surface: #FFFFFF;
+    --surface-2: #EDF2F2;
+    --line: #DCE5E5;
+
+    --ink: #182A2D;
+    --muted: #5A6E71;
+
+    --primary: #16696F;
+    --on-primary: #FFFFFF;
+    --primary-soft: #E3EFEF;
+
+    --ok: #3E8460;
+    --ok-soft: #E4F0EA;
+    --warn: #C96F4A;
+    --warn-soft: #F7EAE3;
+    --danger: #B4473C;
+    --danger-soft: #F6E7E5;
+
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "Roboto Mono", monospace;
+
+    --radius: 12px;
+    --radius-lg: 18px;
+    --shadow: 0 1px 2px rgb(24 42 45 / 0.06), 0 4px 16px rgb(24 42 45 / 0.06);
+
+    --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem;
+    --s-5: 1.5rem;  --s-6: 2rem;   --s-7: 3rem;
+
+    --tabbar-h: 4rem;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #101B1D;
+        --surface: #182527;
+        --surface-2: #131F21;
+        --line: #24393B;
+        --ink: #E4EDEC;
+        --muted: #93A6A6;
+        --primary: #4FB3B8;
+        --on-primary: #0C2224;
+        --primary-soft: #143134;
+        --ok: #6FBF95;
+        --ok-soft: #16302484;
+        --warn: #E08A64;
+        --warn-soft: #33221b;
+        --danger: #E07A6E;
+        --danger-soft: #34201d;
+        --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.3);
+        color-scheme: dark;
+    }
+}
+
+/* ---------- reset & base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+}
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--s-3); }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+p  { margin: 0 0 var(--s-3); }
+
+a { color: var(--primary); text-decoration: none; }
+
+:is(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+/* FocusOnNavigate gives the h1 tabindex="-1" so screen readers land on it — which
+   also makes it match [tabindex] above. Same bug as the web app's Part 2, new face. */
+h1[tabindex]:focus, h1[tabindex]:focus-visible { outline: none; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.mono  { font-family: var(--mono); letter-spacing: 0.08em; }
+.lead  { font-size: 1.05rem; color: var(--muted); }
+
+.visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- app shell: header, scrolling main, bottom tab bar ---------- */
+.app {
+    min-height: 100dvh;
+    display: flex; flex-direction: column;
+}
+
+.app-top {
+    padding: calc(var(--s-3) + env(safe-area-inset-top)) var(--s-4) var(--s-3);
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 20;
+}
+
+.brand {
+    font-weight: 800; font-size: 1.15rem; color: var(--ink);
+    display: inline-flex; align-items: baseline; gap: 2px;
+}
+.brand .pulse { color: var(--primary); }
+.brand-sub { font-weight: 500; color: var(--muted); margin-left: var(--s-2); font-size: 0.95rem; }
+
+.app-main {
+    flex: 1;
+    width: 100%; max-width: 32rem; margin: 0 auto;
+    padding: var(--s-5) var(--s-4) calc(var(--tabbar-h) + var(--s-6) + env(safe-area-inset-bottom));
+}
+
+.tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+}
+
+.tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--muted); font-size: 0.72rem; font-weight: 600;
+    text-decoration: none;
+}
+.tab-icon { font-size: 1.35rem; line-height: 1; }
+.tab.active { color: var(--primary); }
+.tab.active .tab-icon { transform: translateY(-1px); }
+
+/* ---------- surfaces ---------- */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: var(--s-4);
+    box-shadow: var(--shadow);
+    margin-bottom: var(--s-4);
+}
+.card > :last-child { margin-bottom: 0; }
+
+.hero { margin-bottom: var(--s-5); }
+.hero h1 { font-size: 1.85rem; }
+
+.stack { display: flex; flex-direction: column; gap: var(--s-3); }
+.row   { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+
+.facts { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-4); margin: 0 0 var(--s-3); }
+.facts dt { color: var(--muted); font-size: 0.875rem; }
+.facts dd { margin: 0; }
+
+/* ---------- controls ---------- */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+    min-height: 2.75rem; padding: 0 var(--s-4);
+    border-radius: var(--radius); border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+    font: inherit; font-weight: 700; cursor: pointer;
+    text-decoration: none; width: 100%;
+}
+.btn-primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.btn-ghost   { background: transparent; color: var(--primary); border-color: var(--primary); }
+.btn-lg      { min-height: 3.25rem; font-size: 1.1rem; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+.code-input {
+    width: 100%;
+    font: 700 2.2rem var(--mono);
+    letter-spacing: 0.35em; text-align: center; text-transform: uppercase;
+    padding: var(--s-3) var(--s-2);
+    border: 2px solid var(--line); border-radius: var(--radius);
+    background: var(--surface-2); color: var(--ink);
+}
+.code-input::placeholder { color: var(--line); letter-spacing: 0.35em; }
+.code-input:focus { border-color: var(--primary); outline: none; }
+
+/* ---------- status language ---------- */
+.pill {
+    display: inline-flex; align-items: center; gap: var(--s-1);
+    padding: 2px var(--s-3); border-radius: 999px;
+    font-size: 0.8rem; font-weight: 700;
+    background: var(--surface-2); color: var(--muted);
+}
+.pill-ok     { background: var(--ok-soft); color: var(--ok); }
+.pill-warn   { background: var(--warn-soft); color: var(--warn); }
+.pill-danger { background: var(--danger-soft); color: var(--danger); }
+.pill-primary{ background: var(--primary-soft); color: var(--primary); }
+
+.notice {
+    padding: var(--s-3) var(--s-4); border-radius: var(--radius);
+    background: var(--warn-soft); color: var(--warn); font-weight: 600;
+    margin-bottom: var(--s-4);
+}
+.notice-ok { background: var(--ok-soft); color: var(--ok); }
+.notice-danger { background: var(--danger-soft); color: var(--danger); }
+
+/* the one number a waiting patient cares about */
+.big-number {
+    font-size: 4.5rem; font-weight: 800; line-height: 1; color: var(--primary);
+    font-variant-numeric: tabular-nums; margin: var(--s-2) 0;
+}
+.big-label { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
+
+/* ---------- blazor error bar (hidden until it's needed) ---------- */
+#blazor-error-ui {
+    display: none;
+    position: fixed; left: 0; right: 0; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    background: var(--danger-soft); color: var(--danger);
+    padding: var(--s-3) var(--s-4); z-index: 30;
+}
+#blazor-error-ui .dismiss { float: right; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}

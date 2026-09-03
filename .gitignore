@@ -3,3 +3,7 @@ bin/
 obj/
 *.user
 .vs/
+
+# Firebase config + service-account key live outside git (see docs/pocket.md)
+.secrets/
+**/google-services.json

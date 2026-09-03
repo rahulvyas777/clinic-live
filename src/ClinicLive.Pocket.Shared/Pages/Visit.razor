@@ -1,0 +1,25 @@
+@page "/visit"
+@page "/visit/{Code}"
+
+<PageTitle>My visit — ClinicLive Pocket</PageTitle>
+
+<h1>My visit</h1>
+
+@if (Code is null)
+{
+    <section class="card">
+        <p class="muted">Enter your confirmation code on the Home tab to see your visit here.</p>
+        <a class="btn btn-ghost" href="">Go to Home</a>
+    </section>
+}
+else
+{
+    <section class="card">
+        <p>Looking up <strong class="mono">@Code</strong>…</p>
+        <p class="muted">The clinic's API arrives in Part 3. For now this screen only proves the route works.</p>
+    </section>
+}
+
+@code {
+    [Parameter] public string? Code { get; set; }
+}

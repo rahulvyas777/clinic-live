@@ -1,0 +1,45 @@
+namespace ClinicLive.Contracts;
+
+/// <summary>Where the clinic is and when it's open — everything the app shows before you even have a booking.</summary>
+public sealed record ClinicInfo(
+    string Name,
+    string AddressLine1,
+    string AddressLine2,
+    string Phone,
+    double Latitude,
+    double Longitude,
+    string TimeZone,
+    string OpeningHours);
+
+/// <summary>Lifecycle of one appointment as the patient sees it. Mirrors the server enum by NAME, not number.</summary>
+public enum VisitStatus
+{
+    Booked,
+    CheckedIn,
+    InProgress,
+    Done,
+    Cancelled,
+    NoShow,
+}
+
+/// <summary>
+/// One appointment, looked up by its confirmation code. First name only — the code
+/// is the patient's credential, and a leaked screen should reveal as little as possible.
+/// </summary>
+public sealed record VisitDto(
+    string Code,
+    string FirstName,
+    DateTime StartsAtUtc,
+    string StartsAtLocal,
+    string DayLocal,
+    VisitStatus Status,
+    bool IsToday,
+    bool CanCheckIn,
+    int? Position,
+    int WaitingCount,
+    string? NowServing);
+
+public sealed record CheckInResponse(bool Success, string? Error, int Position);
+
+/// <summary>The public waiting-room board, exactly what the wall TV shows (names masked).</summary>
+public sealed record QueueDto(string? NowServing, IReadOnlyList<string> Waiting);

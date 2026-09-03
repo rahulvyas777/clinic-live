@@ -20,6 +20,30 @@ Directory.CreateDirectory(outDir);
 using var playwright = await Playwright.CreateAsync();
 await using var browser = await playwright.Chromium.LaunchAsync();
 
+// --pocket [--dark]: photograph the Pocket app's WEB host (season three) at phone size
+// and stop. Same components as the Android/Windows shots, third host.
+if (args.Contains("--pocket"))
+{
+    var scheme = args.Contains("--dark") ? ColorScheme.Dark : ColorScheme.Light;
+    var pocket = await browser.NewContextAsync(new()
+    {
+        ViewportSize = new() { Width = 375, Height = 812 },
+        ColorScheme = scheme,
+    });
+    Console.WriteLine($"pocket web host ({scheme}):");
+    foreach (var (path, name) in new[] { ("/", "home"), ("/settings", "settings"), ("/visit/DEMO00", "visit"), ("/directions", "directions") })
+    {
+        var page = await pocket.NewPageAsync();
+        await page.GotoAsync($"{baseUrl}{path}", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForTimeoutAsync(800);
+        var file = $"web-{name}{(scheme == ColorScheme.Dark ? "-dark" : "")}.png";
+        await page.ScreenshotAsync(new() { Path = Path.Combine(outDir, file) });
+        Console.WriteLine($"  {file}");
+        await page.CloseAsync();
+    }
+    return;
+}
+
 // --- public surfaces, each at its natural device ---
 var phone = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 375, Height = 812 } });
 var tablet = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 768, Height = 1024 } });

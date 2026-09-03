@@ -1,0 +1,22 @@
+@page "/settings"
+@inject IPlatformInfo Platform
+
+<PageTitle>Settings — ClinicLive Pocket</PageTitle>
+
+<h1>Settings</h1>
+
+<section class="card">
+    <h2>About this app</h2>
+    <dl class="facts">
+        <dt>Running on</dt>
+        <dd>@Platform.Platform @Platform.Version</dd>
+        <dt>Host</dt>
+        <dd>@Platform.Host</dd>
+        <dt>Layout</dt>
+        <dd>@(Platform.IsPhone ? "Phone (one hand, thumbs)" : "Large screen")</dd>
+    </dl>
+    <p class="muted small">
+        One set of screens, three hosts. This page is the same Razor component whether you're
+        reading it in a native app or a browser — only the answer above changes.
+    </p>
+</section>

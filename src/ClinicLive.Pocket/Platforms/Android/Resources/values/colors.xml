@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The status bar and splash are painted by Android from THESE, not from CSS.
+         The template's purple survived the first screenshot; the tokens live here too. -->
+    <color name="colorPrimary">#16696F</color>
+    <color name="colorPrimaryDark">#0F4A4E</color>
+    <color name="colorAccent">#C96F4A</color>
+</resources>

@@ -1,0 +1,33 @@
+@page "/"
+@inject NavigationManager Nav
+
+<PageTitle>ClinicLive Pocket</PageTitle>
+
+<section class="hero">
+    <h1>Your visit, in your pocket.</h1>
+    <p class="lead">
+        Check in from the car park, watch the queue move, and get a nudge when it's
+        your turn — no more staring at the wall TV.
+    </p>
+</section>
+
+<section class="card">
+    <h2>Find my appointment</h2>
+    <p class="muted">Your confirmation code is on your booking ticket.</p>
+
+    <form class="stack" @onsubmit="Go" @onsubmit:preventDefault>
+        <label class="visually-hidden" for="code">Confirmation code</label>
+        <input id="code" class="code-input" @bind="_code" @bind:event="oninput"
+               placeholder="••••••" maxlength="6" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" inputmode="text" />
+        <button class="btn btn-primary btn-lg" type="submit" disabled="@(_code.Trim().Length < 6)">
+            Show my visit
+        </button>
+    </form>
+</section>
+
+@code {
+    private string _code = "";
+
+    private void Go() => Nav.NavigateTo($"visit/{_code.Trim().ToUpperInvariant()}");
+}

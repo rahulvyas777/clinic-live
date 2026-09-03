@@ -1,0 +1,36 @@
+@inherits LayoutComponentBase
+
+<div class="app">
+    <header class="app-top">
+        <span class="brand">Clinic<span class="pulse">Live</span> <span class="brand-sub">Pocket</span></span>
+    </header>
+
+    <main class="app-main">
+        @Body
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+        <NavLink class="tab" href="" Match="NavLinkMatch.All">
+            <span class="tab-icon" aria-hidden="true">🏠</span>
+            <span class="tab-label">Home</span>
+        </NavLink>
+        <NavLink class="tab" href="visit">
+            <span class="tab-icon" aria-hidden="true">🪑</span>
+            <span class="tab-label">My visit</span>
+        </NavLink>
+        <NavLink class="tab" href="directions">
+            <span class="tab-icon" aria-hidden="true">📍</span>
+            <span class="tab-label">Find us</span>
+        </NavLink>
+        <NavLink class="tab" href="settings">
+            <span class="tab-icon" aria-hidden="true">⚙️</span>
+            <span class="tab-label">Settings</span>
+        </NavLink>
+    </nav>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Something went wrong.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
