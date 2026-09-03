@@ -15,6 +15,9 @@
     <!-- Part 7: "how far away am I?" — both, so the user can choose precise or approximate -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Part 8: the ticket scanner. A camera is optional — the code can always be typed. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Part 7: Android 11+ package visibility. Google Maps was installed and "Open in
          Maps" still reported no maps app — an app may not SEE other apps' intent
          handlers unless it declares which ones it needs. -->

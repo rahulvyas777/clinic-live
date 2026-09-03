@@ -13,6 +13,9 @@
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.13.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- Season three, Part 8: decode the server's ticket QR back to text (managed-only, so CI on Linux can run it) -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <PackageReference Include="ZXing.Net.Bindings.ImageSharp.V3" Version="0.16.20" />
   </ItemGroup>
 
   <ItemGroup>

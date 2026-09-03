@@ -22,6 +22,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- The QR code on the booking ticket (season three, Part 8) -->
+    <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>
 
   <ItemGroup>

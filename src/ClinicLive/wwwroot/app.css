@@ -337,6 +337,11 @@ main.page {
     letter-spacing: 0.18em; color: var(--primary); margin: var(--s-2) 0;
 }
 .ticket-hint { color: var(--muted); font-size: 0.9rem; margin-bottom: 0; }
+/* season three: the QR the Pocket app scans — white tile so dark mode stays scannable */
+.ticket-qr {
+    display: block; width: 160px; height: 160px; margin: var(--s-3) auto;
+    background: #fff; padding: 6px; border-radius: 8px;
+}
 
 /* ---------- kiosk (touch appliance) ---------- */
 .kiosk { text-align: center; max-width: 30rem; width: 100%; }

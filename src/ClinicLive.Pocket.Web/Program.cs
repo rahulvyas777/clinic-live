@@ -17,6 +17,7 @@ builder.Services.AddSingleton<IAppLifecycle, AppLifecycle>();
 builder.Services.AddScoped<IHaptics, Haptics>();
 builder.Services.AddScoped<INotifier, Notifier>();
 builder.Services.AddScoped<ILocator, Locator>();
+builder.Services.AddSingleton<ICodeScanner, CodeScanner>();
 builder.Services.AddSingleton<IPushRegistration, PushRegistration>();
 
 // This host runs on a server, so it calls the clinic server-to-server; the

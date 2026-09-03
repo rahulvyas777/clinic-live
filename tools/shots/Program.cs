@@ -77,6 +77,7 @@ if (bookArg is not null)
     await bp.FillAsync("#phone", phoneNo);
     await bp.ClickAsync("button[type='submit']");
     await bp.WaitForSelectorAsync(".ticket");
+    await bp.WaitForTimeoutAsync(900);   // let the pop-in finish and the QR image (season three) load
     await bp.ScreenshotAsync(new() { Path = Path.Combine(outDir, "book-phone-ticket.png"), FullPage = true });
     Console.WriteLine("  book-phone-ticket.png");
     await bp.CloseAsync();

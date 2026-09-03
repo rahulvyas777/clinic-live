@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using ZXing.Net.Maui.Controls;
 using ClinicLive.Pocket.Services;
 using ClinicLive.Pocket.Shared.Services;
 using ClinicLive.Pocket.Shared.Services.Device;
@@ -10,7 +11,9 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-        builder.UseMauiApp<App>();
+        builder
+            .UseMauiApp<App>()
+            .UseBarcodeReader();   // ZXing.Net.Maui — the camera view on ScanPage (Part 8)
 
         // Device capabilities the shared UI asks for. Each interface lives in the
         // shared project; each implementation lives here, next to the platform it
@@ -22,6 +25,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotifier, Notifier>();
         builder.Services.AddSingleton<IPushRegistration, PushRegistration>();
         builder.Services.AddSingleton<ILocator, Locator>();
+        builder.Services.AddSingleton<ICodeScanner, CodeScanner>();
 
         // The clinic's API and live queue — aimed at wherever "the server" is from
         // this device (see ApiEndpoint).

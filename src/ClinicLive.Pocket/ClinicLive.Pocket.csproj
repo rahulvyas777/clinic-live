@@ -52,6 +52,8 @@
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    <!-- Part 8: camera + QR decoding for the scanner page -->
+    <PackageReference Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
   </ItemGroup>
 
   <!-- Part 6: Firebase Cloud Messaging, Android only. google-services.json is the

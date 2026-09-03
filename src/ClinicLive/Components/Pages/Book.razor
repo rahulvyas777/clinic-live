@@ -16,9 +16,12 @@
         <div class="ticket">
             <div class="ticket-when">@Clinic.Local(_confirmed.StartsAt, "dddd d MMMM · HH:mm")</div>
             <div class="ticket-code">@_confirmed.ConfirmationCode</div>
+            @* Season three: the same code as a QR, for the Pocket app's scanner. *@
+            <img class="ticket-qr" src="/api/pocket/visits/@_confirmed.ConfirmationCode/qr.png"
+                 alt="QR code containing your check-in code" width="160" height="160" />
             <p class="ticket-hint">
-                Your check-in code. Type it at the kiosk when you arrive —
-                it's also all you need to <a href="/cancel">cancel</a>.
+                Your check-in code. Type it at the kiosk when you arrive, or scan it with
+                the ClinicLive Pocket app — it's also all you need to <a href="/cancel">cancel</a>.
             </p>
         </div>
 
