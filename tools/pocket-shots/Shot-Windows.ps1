@@ -55,6 +55,12 @@ if ($FullScreen) {
     $rect.Left = $work.Left; $rect.Top = $work.Top; $rect.Right = $work.Right; $rect.Bottom = $work.Bottom
 }
 
+if (-not $FullScreen) {
+    # The extended frame bounds include a few pixels of shadow ABOVE the title bar,
+    # through which a sliver of whatever window is behind can show. Not ours; crop it.
+    $rect.Top += 12
+}
+
 $w = $rect.Right - $rect.Left; $h = $rect.Bottom - $rect.Top
 $bmp = New-Object System.Drawing.Bitmap $w, $h
 $g = [System.Drawing.Graphics]::FromImage($bmp)

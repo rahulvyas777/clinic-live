@@ -18,8 +18,55 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Build
-        run: dotnet build --configuration Release
+      # The clinic, its contracts, the shared Pocket components and the tests.
+      # (The MAUI app is built by the jobs below — it needs mobile workloads.)
+      - name: Build clinic + tests
+        run: |
+          dotnet build src/ClinicLive --configuration Release
+          dotnet build tests/ClinicLive.Tests --configuration Release
 
       - name: Test (spins a real PostgreSQL via Testcontainers)
-        run: dotnet test --configuration Release --no-build --logger "trx"
+        run: dotnet test tests/ClinicLive.Tests --configuration Release --no-build --logger "trx"
+
+  # Season three: the phone app compiles on Linux — no Firebase file in CI means no
+  # push resources, which the csproj tolerates (the GoogleServicesJson item is
+  # conditional on the file existing).
+  build-pocket-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Java 17 (Android build tools need it)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install the Android workload
+        run: dotnet workload install android
+
+      - name: Build the Pocket app (Android, Release)
+        run: dotnet build src/ClinicLive.Pocket -f net10.0-android --configuration Release
+
+  build-pocket-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install the Windows MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Build the Pocket app (Windows, Release, unpackaged)
+        run: dotnet build src/ClinicLive.Pocket -f net10.0-windows10.0.19041.0 --configuration Release -p:WindowsPackageType=None
