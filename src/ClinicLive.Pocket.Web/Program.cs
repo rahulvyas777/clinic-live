@@ -11,15 +11,19 @@ builder.Services.AddRazorComponents()
 // The web host answers the same capability questions as the phone —
 // honestly. A browser is not a phone, and the fallbacks say so.
 builder.Services.AddSingleton<IPlatformInfo, PlatformInfo>();
+builder.Services.AddSingleton<IAppLifecycle, AppLifecycle>();
 
 // This host runs on a server, so it calls the clinic server-to-server; the
 // browser never talks to the clinic's API directly (which is why no CORS).
-var apiBase = builder.Configuration["ClinicLive:ApiBase"] ?? "http://localhost:5159/";
+var apiBase = new Uri(builder.Configuration["ClinicLive:ApiBase"] ?? "http://localhost:5159/");
+builder.Services.AddSingleton(new ClinicEndpoint(apiBase));
 builder.Services.AddHttpClient<PocketApi>(http =>
 {
-    http.BaseAddress = new Uri(apiBase);
+    http.BaseAddress = apiBase;
     http.Timeout = TimeSpan.FromSeconds(10);
 });
+// One hub connection for the whole web host, shared by every visitor's circuit.
+builder.Services.AddSingleton<QueueLive>();
 
 var app = builder.Build();
 

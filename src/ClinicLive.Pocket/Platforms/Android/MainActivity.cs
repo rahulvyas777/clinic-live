@@ -23,9 +23,13 @@ public class MainActivity : MauiAppCompatActivity
             ViewCompat.SetOnApplyWindowInsetsListener(content, new SystemBarsPadding());
         }
 
-        if (OperatingSystem.IsAndroidVersionAtLeast(21) && Window is not null)
+        // Android 15 goes edge-to-edge and ignores status bar colours entirely (the
+        // API is obsolete there) — on older versions, paint it petrol to match the app.
+        if (OperatingSystem.IsAndroidVersionAtLeast(21) && !OperatingSystem.IsAndroidVersionAtLeast(35) && Window is not null)
         {
+#pragma warning disable CA1422
             Window.SetStatusBarColor(Android.Graphics.Color.ParseColor("#16696F"));
+#pragma warning restore CA1422
         }
     }
 
@@ -41,7 +45,10 @@ public class MainActivity : MauiAppCompatActivity
             }
 
             var bars = insets.GetInsets(WindowInsetsCompat.Type.SystemBars());
-            v.SetPadding(bars.Left, bars.Top, bars.Right, bars.Bottom);
+            if (bars is not null)
+            {
+                v.SetPadding(bars.Left, bars.Top, bars.Right, bars.Bottom);
+            }
             return WindowInsetsCompat.Consumed!;
         }
     }

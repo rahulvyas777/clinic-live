@@ -17,11 +17,14 @@ public static class MauiProgram
         // actually talks to. The web host registers its own answers to the same
         // questions.
         builder.Services.AddSingleton<IPlatformInfo, PlatformInfo>();
+        builder.Services.AddSingleton<IAppLifecycle>(AppLifecycle.Instance);
 
-        // The clinic's API — one HttpClient for the app's lifetime, aimed at wherever
-        // "the server" is from this device (see ApiEndpoint).
+        // The clinic's API and live queue — aimed at wherever "the server" is from
+        // this device (see ApiEndpoint).
+        builder.Services.AddSingleton(new ClinicEndpoint(ApiEndpoint.Base));
         builder.Services.AddSingleton(new HttpClient { BaseAddress = ApiEndpoint.Base, Timeout = TimeSpan.FromSeconds(10) });
         builder.Services.AddSingleton<PocketApi>();
+        builder.Services.AddSingleton<QueueLive>();
 
         builder.Services.AddMauiBlazorWebView();
 

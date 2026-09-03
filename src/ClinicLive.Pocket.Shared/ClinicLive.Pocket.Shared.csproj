@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+    <!-- The same SignalR client the wall TV uses (Season 1, Part 7) — a phone is just another board. -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>

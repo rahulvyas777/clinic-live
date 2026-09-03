@@ -1,10 +1,18 @@
 @page "/visit"
 @page "/visit/{Code}"
+@implements IDisposable
 @inject PocketApi Api
+@inject QueueLive Live
 
 <PageTitle>My visit — ClinicLive Pocket</PageTitle>
 
-<h1>My visit</h1>
+<div class="row" style="justify-content: space-between; margin-bottom: var(--s-3)">
+    <h1 style="margin: 0">My visit</h1>
+    @if (_visit is not null && !_connected)
+    {
+        <span class="pill pill-warn">reconnecting…</span>
+    }
+</div>
 
 @if (Code is null)
 {
@@ -13,13 +21,13 @@
         <a class="btn btn-ghost" href="">Go to Home</a>
     </section>
 }
-else if (_loading)
+else if (_loading && _visit is null)
 {
     <section class="card">
         <p class="muted">Asking the clinic about <span class="mono">@Code</span>…</p>
     </section>
 }
-else if (_unreachable)
+else if (_unreachable && _visit is null)
 {
     <section class="card">
         <div class="notice notice-danger">Can't reach the clinic right now.</div>
@@ -49,7 +57,7 @@ else
         @switch (_visit.Status)
         {
             case VisitStatus.Booked when _visit.CanCheckIn:
-                <p class="muted">You're here? Check in and take a seat — the queue will tell you when it's your turn.</p>
+                <p class="muted">You're here? Check in and take a seat — this screen will tell you when it's your turn.</p>
                 @if (_checkInError is not null)
                 {
                     <div class="notice">@_checkInError</div>
@@ -65,12 +73,13 @@ else
 
             case VisitStatus.CheckedIn:
                 <p class="big-label">Your place in the queue</p>
-                <p class="big-number">@(_visit.Position?.ToString() ?? "—")</p>
+                <p class="big-number" @key="_visit.Position">@(_visit.Position?.ToString() ?? "—")</p>
                 <p class="muted">
                     @(_visit.WaitingCount == 1 ? "You're the only one waiting." : $"{_visit.WaitingCount} people waiting.")
                     @if (_visit.NowServing is not null)
                     {
-                        <text> Now serving <strong>@_visit.NowServing</strong>.</text>
+                        @* the masked name ("David C.") already ends with a full stop *@
+                        <text> Now serving <strong>@_visit.NowServing</strong></text>
                     }
                 </p>
                 break;
@@ -89,12 +98,12 @@ else
         }
     </section>
 
-    <section class="card">
-        <p class="muted small">
-            This screen asks the clinic each time you open it. Live updates arrive in Part 4.
+    @if (_visit.Status is VisitStatus.Booked or VisitStatus.CheckedIn)
+    {
+        <p class="muted small" style="text-align:center">
+            @(_connected ? "Live — updates the moment the queue moves." : "Showing the last thing the clinic told us.")
         </p>
-        <button class="btn btn-ghost" @onclick="LoadAsync" disabled="@_busy">Refresh</button>
-    </section>
+    }
 }
 
 @code {
@@ -104,9 +113,34 @@ else
     private bool _loading;
     private bool _unreachable;
     private bool _busy;
+    private bool _connected;
     private string? _checkInError;
 
+    protected override async Task OnInitializedAsync()
+    {
+        // The hub is app-wide; this screen just listens while it's on screen.
+        Live.Changed += OnQueueChanged;
+        Live.ConnectionChanged += OnConnectionChanged;
+        await Live.EnsureStartedAsync();
+        _connected = Live.IsConnected;
+    }
+
     protected override Task OnParametersSetAsync() => Code is null ? Task.CompletedTask : LoadAsync();
+
+    private void OnQueueChanged() => _ = InvokeAsync(async () =>
+    {
+        if (Code is not null)
+        {
+            await LoadAsync();
+            StateHasChanged();
+        }
+    });
+
+    private void OnConnectionChanged(bool connected) => _ = InvokeAsync(() =>
+    {
+        _connected = connected;
+        StateHasChanged();
+    });
 
     private async Task LoadAsync()
     {
@@ -147,6 +181,12 @@ else
         {
             _busy = false;
         }
+    }
+
+    public void Dispose()
+    {
+        Live.Changed -= OnQueueChanged;
+        Live.ConnectionChanged -= OnConnectionChanged;
     }
 
     private static string StatusLabel(VisitStatus s) => s switch
