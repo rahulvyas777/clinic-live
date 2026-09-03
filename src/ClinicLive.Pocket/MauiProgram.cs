@@ -18,6 +18,8 @@ public static class MauiProgram
         // questions.
         builder.Services.AddSingleton<IPlatformInfo, PlatformInfo>();
         builder.Services.AddSingleton<IAppLifecycle>(AppLifecycle.Instance);
+        builder.Services.AddSingleton<IHaptics, Haptics>();
+        builder.Services.AddSingleton<INotifier, Notifier>();
 
         // The clinic's API and live queue — aimed at wherever "the server" is from
         // this device (see ApiEndpoint).

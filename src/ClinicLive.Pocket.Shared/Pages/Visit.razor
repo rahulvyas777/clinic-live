@@ -3,6 +3,8 @@
 @implements IDisposable
 @inject PocketApi Api
 @inject QueueLive Live
+@inject IHaptics Haptics
+@inject INotifier Notifier
 
 <PageTitle>My visit — ClinicLive Pocket</PageTitle>
 
@@ -57,7 +59,7 @@ else
         @switch (_visit.Status)
         {
             case VisitStatus.Booked when _visit.CanCheckIn:
-                <p class="muted">You're here? Check in and take a seat — this screen will tell you when it's your turn.</p>
+                <p class="muted">You're here? Check in and take a seat — we'll buzz you when you're next, and again when it's your turn.</p>
                 @if (_checkInError is not null)
                 {
                     <div class="notice">@_checkInError</div>
@@ -82,6 +84,10 @@ else
                         <text> Now serving <strong>@_visit.NowServing</strong></text>
                     }
                 </p>
+                @if (_notifications == false)
+                {
+                    <p class="muted small">Notifications are off, so keep this screen open — it still updates live.</p>
+                }
                 break;
 
             case VisitStatus.InProgress:
@@ -114,6 +120,7 @@ else
     private bool _unreachable;
     private bool _busy;
     private bool _connected;
+    private bool? _notifications;   // null = never asked
     private string? _checkInError;
 
     protected override async Task OnInitializedAsync()
@@ -148,7 +155,12 @@ else
         _unreachable = false;
         try
         {
+            var before = _visit;
             _visit = await Api.GetVisitAsync(Code!);
+            if (before is not null && _visit is not null)
+            {
+                await NudgeIfItMattersAsync(before, _visit);
+            }
         }
         catch (ClinicUnreachableException)
         {
@@ -160,14 +172,40 @@ else
         }
     }
 
+    /// <summary>
+    /// Only TRANSITIONS earn a buzz — never the first load, never a refresh that
+    /// changed nothing. Two moments matter to someone in a waiting room: "you're
+    /// next" (get your things together) and "it's your turn" (go now).
+    /// </summary>
+    private async Task NudgeIfItMattersAsync(VisitDto before, VisitDto after)
+    {
+        if (after.Status == VisitStatus.InProgress && before.Status != VisitStatus.InProgress)
+        {
+            Haptics.Buzz();
+            await Notifier.ShowAsync("It's your turn", $"{after.FirstName}, please go through now.");
+        }
+        else if (after.Status == VisitStatus.CheckedIn && after.Position == 1 && before.Position != 1)
+        {
+            Haptics.Tap();
+            await Notifier.ShowAsync("You're next", "Get ready — you're first in the queue.");
+        }
+    }
+
     private async Task CheckInAsync()
     {
         _busy = true;
         _checkInError = null;
         try
         {
+            // Ask for notifications HERE, where the reason is obvious — not at app launch.
+            _notifications = await Notifier.RequestPermissionAsync();
+
             var result = await Api.CheckInAsync(Code!);
-            if (!result.Success)
+            if (result.Success)
+            {
+                Haptics.Tap();
+            }
+            else
             {
                 _checkInError = result.Error;
             }

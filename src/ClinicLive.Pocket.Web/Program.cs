@@ -12,6 +12,10 @@ builder.Services.AddRazorComponents()
 // honestly. A browser is not a phone, and the fallbacks say so.
 builder.Services.AddSingleton<IPlatformInfo, PlatformInfo>();
 builder.Services.AddSingleton<IAppLifecycle, AppLifecycle>();
+// Scoped, not singleton: these talk to ONE visitor's browser through that
+// visitor's circuit (IJSRuntime is per circuit).
+builder.Services.AddScoped<IHaptics, Haptics>();
+builder.Services.AddScoped<INotifier, Notifier>();
 
 // This host runs on a server, so it calls the clinic server-to-server; the
 // browser never talks to the clinic's API directly (which is why no CORS).

@@ -1,9 +1,27 @@
 @page "/settings"
 @inject IPlatformInfo Platform
+@inject IHaptics Haptics
+@inject INotifier Notifier
 
 <PageTitle>Settings — ClinicLive Pocket</PageTitle>
 
 <h1>Settings</h1>
+
+<section class="card">
+    <h2>Nudges</h2>
+    <p class="muted">A light tap when you're next, a proper buzz when it's your turn.</p>
+    <dl class="facts">
+        <dt>Haptics</dt>
+        <dd>@(Haptics.IsSupported ? "Available on this device" : "Not available here")</dd>
+        <dt>Notifications</dt>
+        <dd>@(_notifications switch { true => "Allowed", false => "Not allowed", null => "Not asked yet" })</dd>
+    </dl>
+    <div class="row">
+        <button class="btn btn-ghost" style="width:auto" @onclick="() => Haptics.Tap()">Try a tap</button>
+        <button class="btn btn-ghost" style="width:auto" @onclick="() => Haptics.Buzz()">Try a buzz</button>
+        <button class="btn btn-ghost" style="width:auto" @onclick="TestNotificationAsync">Send a test notification</button>
+    </div>
+</section>
 
 <section class="card">
     <h2>About this app</h2>
@@ -17,6 +35,19 @@
     </dl>
     <p class="muted small">
         One set of screens, three hosts. This page is the same Razor component whether you're
-        reading it in a native app or a browser — only the answer above changes.
+        reading it in a native app or a browser — only the answers above change.
     </p>
 </section>
+
+@code {
+    private bool? _notifications;
+
+    private async Task TestNotificationAsync()
+    {
+        _notifications = await Notifier.RequestPermissionAsync();
+        if (_notifications == true)
+        {
+            await Notifier.ShowAsync("ClinicLive Pocket", "This is what a nudge looks like.");
+        }
+    }
+}

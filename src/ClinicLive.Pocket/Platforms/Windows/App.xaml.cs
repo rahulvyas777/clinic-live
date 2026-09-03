@@ -1,7 +1,5 @@
-﻿using Microsoft.UI.Xaml;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppNotifications;
 
 namespace ClinicLive.Pocket.WinUI;
 
@@ -10,15 +8,20 @@ namespace ClinicLive.Pocket.WinUI;
 /// </summary>
 public partial class App : MauiWinUIApplication
 {
-    /// <summary>
-    /// Initializes the singleton application object.  This is the first line of authored code
-    /// executed, and as such is the logical equivalent of main() or WinMain().
-    /// </summary>
     public App()
     {
         this.InitializeComponent();
     }
 
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        // Unpackaged apps must register for notifications BEFORE the first window
+        // exists — registering lazily "works" (no exception, Setting == Enabled) and
+        // then Show() quietly displays nothing. Part 5's screenshot proved it.
+        AppNotificationManager.Default.Register();
+
+        base.OnLaunched(args);
+    }
+
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 }
-
