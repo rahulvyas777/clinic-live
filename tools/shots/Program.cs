@@ -31,7 +31,7 @@ if (args.Contains("--pocket"))
         ColorScheme = scheme,
     });
     Console.WriteLine($"pocket web host ({scheme}):");
-    foreach (var (path, name) in new[] { ("/", "home"), ("/settings", "settings"), ("/visit/DEMO00", "visit"), ("/directions", "directions") })
+    foreach (var (path, name) in new[] { ("/", "home"), ("/settings", "settings"), ("/visit/DEMO00", "visit"), ("/directions", "directions"), ("/queue", "queue") })
     {
         var page = await pocket.NewPageAsync();
         await page.GotoAsync($"{baseUrl}{path}", new() { WaitUntil = WaitUntilState.NetworkIdle });
@@ -41,6 +41,15 @@ if (args.Contains("--pocket"))
         Console.WriteLine($"  {file}");
         await page.CloseAsync();
     }
+
+    // Part 10: the same components past the 900px breakpoint — the desk layout.
+    var wide = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1280, Height = 800 }, ColorScheme = scheme });
+    var wp = await wide.NewPageAsync();
+    await wp.GotoAsync($"{baseUrl}/queue", new() { WaitUntil = WaitUntilState.NetworkIdle });
+    await wp.WaitForTimeoutAsync(800);
+    var wideFile = $"web-queue-desktop{(scheme == ColorScheme.Dark ? "-dark" : "")}.png";
+    await wp.ScreenshotAsync(new() { Path = Path.Combine(outDir, wideFile) });
+    Console.WriteLine($"  {wideFile}");
     return;
 }
 

@@ -1,0 +1,107 @@
+@page "/queue"
+@implements IDisposable
+@inject PocketApi Api
+@inject QueueLive Live
+
+<PageTitle>Waiting room — ClinicLive Pocket</PageTitle>
+
+<div class="row" style="justify-content: space-between; margin-bottom: var(--s-3)">
+    <h1 style="margin: 0">Waiting room</h1>
+    @if (_queue is not null && !_connected)
+    {
+        <span class="pill pill-warn">reconnecting…</span>
+    }
+</div>
+
+@if (_unreachable && _queue is null)
+{
+    <section class="card">
+        <div class="notice notice-danger">Can't reach the clinic right now.</div>
+        <button class="btn btn-ghost" @onclick="LoadAsync">Try again</button>
+    </section>
+}
+else if (_queue is null)
+{
+    <section class="card"><p class="muted">Loading…</p></section>
+}
+else
+{
+    <section class="card">
+        <p class="big-label">Now serving</p>
+        @if (_queue.NowServing is { } serving)
+        {
+            <p class="big-number" style="font-size: 2.6rem" @key="serving">@serving</p>
+        }
+        else
+        {
+            <p class="big-number" style="font-size: 2.6rem; color: var(--muted)">—</p>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Up next</h2>
+        @if (_queue.Waiting.Count == 0)
+        {
+            <p class="muted">No one is waiting.</p>
+        }
+        else
+        {
+            <ol class="queue-list">
+                @foreach (var (name, i) in _queue.Waiting.Select((n, i) => (n, i)))
+                {
+                    <li @key="name"><span class="queue-pos">@(i + 1)</span> @name</li>
+                }
+            </ol>
+        }
+        <p class="muted small">
+            The same list as the waiting-room TV — first name and initial only. On a desk
+            at reception this is the glanceable version; on a phone it's context.
+        </p>
+    </section>
+}
+
+@code {
+    private QueueDto? _queue;
+    private bool _unreachable;
+    private bool _connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Live.Changed += OnQueueChanged;
+        Live.ConnectionChanged += OnConnectionChanged;
+        await Live.EnsureStartedAsync();
+        _connected = Live.IsConnected;
+        await LoadAsync();
+    }
+
+    private void OnQueueChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    private void OnConnectionChanged(bool connected) => _ = InvokeAsync(() =>
+    {
+        _connected = connected;
+        StateHasChanged();
+    });
+
+    private async Task LoadAsync()
+    {
+        _unreachable = false;
+        try
+        {
+            _queue = await Api.GetQueueAsync();
+        }
+        catch (ClinicUnreachableException)
+        {
+            _unreachable = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Live.Changed -= OnQueueChanged;
+        Live.ConnectionChanged -= OnConnectionChanged;
+    }
+}

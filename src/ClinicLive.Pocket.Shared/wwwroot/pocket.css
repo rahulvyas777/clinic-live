@@ -250,6 +250,57 @@ input[type="checkbox"] { accent-color: var(--primary); }
     to   { opacity: 1; transform: none; }
 }
 
+/* ---------- the waiting-room list (Part 10) ---------- */
+.queue-list { list-style: none; margin: 0 0 var(--s-3); padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.queue-list li {
+    display: flex; align-items: center; gap: var(--s-3);
+    font-size: 1.15rem; font-weight: 700;
+    padding: var(--s-2) var(--s-3); border-radius: var(--radius); background: var(--surface-2);
+    animation: rise-in 320ms ease-out;
+}
+.queue-pos { color: var(--primary); font-variant-numeric: tabular-nums; min-width: 1.5em; }
+
+/* ---------- wide screens: the desk layout (Part 10) ----------
+   Same DOM, same components. Past 900px the tab bar becomes a side rail and
+   the content column stops pretending to be a phone. The browser host gets
+   this for free on a laptop; the Windows app gets it whenever the window is
+   wide enough — and drops back to the phone layout when it isn't. */
+@media (min-width: 900px) {
+    .app {
+        display: grid;
+        grid-template-columns: 15rem minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 1fr);
+        grid-template-areas:
+            "top    top"
+            "banner banner"
+            "nav    main";
+        min-height: 100dvh;
+    }
+    .app-top { grid-area: top; padding-top: var(--s-3); }
+    .offline-banner { grid-area: banner; }
+    .app-main {
+        grid-area: main;
+        max-width: 44rem; margin: 0;
+        padding: var(--s-6) var(--s-7) var(--s-7);
+    }
+    .tabbar {
+        grid-area: nav;
+        position: static; height: auto; padding: var(--s-4) var(--s-3);
+        flex-direction: column; justify-content: flex-start; gap: var(--s-1);
+        border-top: 0; border-right: 1px solid var(--line);
+    }
+    .tab {
+        flex: 0 0 auto;
+        flex-direction: row; justify-content: flex-start; gap: var(--s-3);
+        padding: var(--s-2) var(--s-3); border-radius: var(--radius);
+        font-size: 0.95rem;
+    }
+    .tab-icon { font-size: 1.15rem; }
+    .tab.active { background: var(--primary-soft); }
+    .tab.active .tab-icon { transform: none; }
+    #blazor-error-ui { bottom: 0; }
+}
+
 /* ---------- blazor error bar (hidden until it's needed) ---------- */
 #blazor-error-ui {
     display: none;

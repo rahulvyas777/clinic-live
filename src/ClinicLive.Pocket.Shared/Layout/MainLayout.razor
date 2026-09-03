@@ -16,6 +16,7 @@
         @Body
     </main>
 
+    @* Bottom tab bar on a phone; a side rail on anything wide (pure CSS, see pocket.css). *@
     <nav class="tabbar" aria-label="Main">
         <NavLink class="tab" href="" Match="NavLinkMatch.All">
             <span class="tab-icon" aria-hidden="true">🏠</span>
@@ -24,6 +25,10 @@
         <NavLink class="tab" href="visit">
             <span class="tab-icon" aria-hidden="true">🪑</span>
             <span class="tab-label">My visit</span>
+        </NavLink>
+        <NavLink class="tab" href="queue">
+            <span class="tab-icon" aria-hidden="true">📋</span>
+            <span class="tab-label">Waiting room</span>
         </NavLink>
         <NavLink class="tab" href="directions">
             <span class="tab-icon" aria-hidden="true">📍</span>
