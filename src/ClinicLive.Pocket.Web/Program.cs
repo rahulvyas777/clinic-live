@@ -1,3 +1,4 @@
+using ClinicLive.Pocket.Shared.Services;
 using ClinicLive.Pocket.Shared.Services.Device;
 using ClinicLive.Pocket.Web.Components;
 using ClinicLive.Pocket.Web.Services;
@@ -10,6 +11,15 @@ builder.Services.AddRazorComponents()
 // The web host answers the same capability questions as the phone —
 // honestly. A browser is not a phone, and the fallbacks say so.
 builder.Services.AddSingleton<IPlatformInfo, PlatformInfo>();
+
+// This host runs on a server, so it calls the clinic server-to-server; the
+// browser never talks to the clinic's API directly (which is why no CORS).
+var apiBase = builder.Configuration["ClinicLive:ApiBase"] ?? "http://localhost:5159/";
+builder.Services.AddHttpClient<PocketApi>(http =>
+{
+    http.BaseAddress = new Uri(apiBase);
+    http.Timeout = TimeSpan.FromSeconds(10);
+});
 
 var app = builder.Build();
 

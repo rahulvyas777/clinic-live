@@ -22,4 +22,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The wire contract shared with the Pocket app (season three). -->
+    <ProjectReference Include="..\ClinicLive.Contracts\ClinicLive.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

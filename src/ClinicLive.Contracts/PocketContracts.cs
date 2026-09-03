@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ClinicLive.Contracts;
 
 /// <summary>Where the clinic is and when it's open — everything the app shows before you even have a booking.</summary>
@@ -11,7 +13,11 @@ public sealed record ClinicInfo(
     string TimeZone,
     string OpeningHours);
 
-/// <summary>Lifecycle of one appointment as the patient sees it. Mirrors the server enum by NAME, not number.</summary>
+/// <summary>
+/// Lifecycle of one appointment as the patient sees it. Mirrors the server enum by NAME,
+/// and travels as a name ("CheckedIn", not 1) so the JSON reads like English in a curl.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<VisitStatus>))]
 public enum VisitStatus
 {
     Booked,

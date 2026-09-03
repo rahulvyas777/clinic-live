@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ClinicLive.Api;
 using ClinicLive.Components;
 using ClinicLive.Components.Account;
 using ClinicLive.Data;
@@ -49,6 +50,7 @@ builder.Services.AddScoped<ClinicLive.Services.BookingService>();
 builder.Services.AddScoped<ClinicLive.Services.QueueService>();
 builder.Services.AddScoped<ClinicLive.Services.ChatService>();
 builder.Services.AddSingleton<ClinicLive.Services.ChatRoom>();
+builder.Services.AddScoped<ClinicLive.Services.PocketService>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -79,6 +81,9 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapHub<ClinicLive.Hubs.QueueHub>("/hubs/queue");
+
+// Season three: the Pocket app's public API.
+app.MapPocketApi();
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

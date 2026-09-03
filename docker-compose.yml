@@ -9,7 +9,11 @@ services:
     ports:
       - "5499:5432"
     volumes:
-      - cliniclive-pgdata:/var/lib/postgresql/data
+      # postgres:18 images keep data in a major-version subdirectory
+      # (/var/lib/postgresql/18/docker), so the volume mounts one level up.
+      # Mounting at /var/lib/postgresql/data — the pre-18 habit — makes the
+      # container refuse to start.
+      - cliniclive-pgdata:/var/lib/postgresql
 
 volumes:
   cliniclive-pgdata:

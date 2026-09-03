@@ -1,9 +1,58 @@
 @page "/directions"
+@inject PocketApi Api
 
 <PageTitle>Find us — ClinicLive Pocket</PageTitle>
 
 <h1>Find us</h1>
 
-<section class="card">
-    <p class="muted">Directions, distance and a one-tap map link arrive in Part 7.</p>
-</section>
+@if (_unreachable)
+{
+    <section class="card">
+        <div class="notice notice-danger">Can't reach the clinic right now.</div>
+        <button class="btn btn-ghost" @onclick="LoadAsync">Try again</button>
+    </section>
+}
+else if (_clinic is null)
+{
+    <section class="card"><p class="muted">Loading…</p></section>
+}
+else
+{
+    <section class="card">
+        <h2>@_clinic.Name</h2>
+        <address class="stack" style="font-style: normal; gap: var(--s-1)">
+            <span>@_clinic.AddressLine1</span>
+            <span>@_clinic.AddressLine2</span>
+        </address>
+        <dl class="facts" style="margin-top: var(--s-3)">
+            <dt>Phone</dt>
+            <dd><a href="tel:@_clinic.Phone">@_clinic.Phone</a></dd>
+            <dt>Open</dt>
+            <dd>@_clinic.OpeningHours</dd>
+        </dl>
+    </section>
+
+    <section class="card">
+        <p class="muted small">How far away are you, and a one-tap route — Part 7.</p>
+    </section>
+}
+
+@code {
+    private ClinicInfo? _clinic;
+    private bool _unreachable;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _unreachable = false;
+        try
+        {
+            _clinic = await Api.GetClinicAsync();
+        }
+        catch (ClinicUnreachableException)
+        {
+            _unreachable = true;
+        }
+    }
+}

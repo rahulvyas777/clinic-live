@@ -1,5 +1,6 @@
 @page "/visit"
 @page "/visit/{Code}"
+@inject PocketApi Api
 
 <PageTitle>My visit — ClinicLive Pocket</PageTitle>
 
@@ -12,14 +13,158 @@
         <a class="btn btn-ghost" href="">Go to Home</a>
     </section>
 }
+else if (_loading)
+{
+    <section class="card">
+        <p class="muted">Asking the clinic about <span class="mono">@Code</span>…</p>
+    </section>
+}
+else if (_unreachable)
+{
+    <section class="card">
+        <div class="notice notice-danger">Can't reach the clinic right now.</div>
+        <p class="muted">Check your connection and try again.</p>
+        <button class="btn btn-ghost" @onclick="LoadAsync">Try again</button>
+    </section>
+}
+else if (_visit is null)
+{
+    <section class="card">
+        <div class="notice">No visit found for <span class="mono">@Code</span>.</div>
+        <p class="muted">Codes are six characters and never contain 0, O, 1, I or L.</p>
+        <a class="btn btn-ghost" href="">Try another code</a>
+    </section>
+}
 else
 {
     <section class="card">
-        <p>Looking up <strong class="mono">@Code</strong>…</p>
-        <p class="muted">The clinic's API arrives in Part 3. For now this screen only proves the route works.</p>
+        <div class="row" style="justify-content: space-between">
+            <h2 style="margin:0">Hi @_visit.FirstName</h2>
+            <span class="pill @StatusPillClass(_visit.Status)">@StatusLabel(_visit.Status)</span>
+        </div>
+        <p class="lead" style="margin-top: var(--s-3)">
+            <strong>@_visit.DayLocal</strong> at <strong>@_visit.StartsAtLocal</strong>
+        </p>
+
+        @switch (_visit.Status)
+        {
+            case VisitStatus.Booked when _visit.CanCheckIn:
+                <p class="muted">You're here? Check in and take a seat — the queue will tell you when it's your turn.</p>
+                @if (_checkInError is not null)
+                {
+                    <div class="notice">@_checkInError</div>
+                }
+                <button class="btn btn-primary btn-lg" @onclick="CheckInAsync" disabled="@_busy">
+                    @(_busy ? "Checking in…" : "I'm here — check me in")
+                </button>
+                break;
+
+            case VisitStatus.Booked:
+                <p class="muted">Check-in opens on the day of your appointment.</p>
+                break;
+
+            case VisitStatus.CheckedIn:
+                <p class="big-label">Your place in the queue</p>
+                <p class="big-number">@(_visit.Position?.ToString() ?? "—")</p>
+                <p class="muted">
+                    @(_visit.WaitingCount == 1 ? "You're the only one waiting." : $"{_visit.WaitingCount} people waiting.")
+                    @if (_visit.NowServing is not null)
+                    {
+                        <text> Now serving <strong>@_visit.NowServing</strong>.</text>
+                    }
+                </p>
+                break;
+
+            case VisitStatus.InProgress:
+                <div class="notice notice-ok">It's your turn — please go through.</div>
+                break;
+
+            case VisitStatus.Done:
+                <p class="muted">Thanks for visiting. See you next time.</p>
+                break;
+
+            default:
+                <p class="muted">This appointment is @StatusLabel(_visit.Status).ToLowerInvariant().</p>
+                break;
+        }
+    </section>
+
+    <section class="card">
+        <p class="muted small">
+            This screen asks the clinic each time you open it. Live updates arrive in Part 4.
+        </p>
+        <button class="btn btn-ghost" @onclick="LoadAsync" disabled="@_busy">Refresh</button>
     </section>
 }
 
 @code {
     [Parameter] public string? Code { get; set; }
+
+    private VisitDto? _visit;
+    private bool _loading;
+    private bool _unreachable;
+    private bool _busy;
+    private string? _checkInError;
+
+    protected override Task OnParametersSetAsync() => Code is null ? Task.CompletedTask : LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _unreachable = false;
+        try
+        {
+            _visit = await Api.GetVisitAsync(Code!);
+        }
+        catch (ClinicUnreachableException)
+        {
+            _unreachable = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CheckInAsync()
+    {
+        _busy = true;
+        _checkInError = null;
+        try
+        {
+            var result = await Api.CheckInAsync(Code!);
+            if (!result.Success)
+            {
+                _checkInError = result.Error;
+            }
+            await LoadAsync();
+        }
+        catch (ClinicUnreachableException)
+        {
+            _unreachable = true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string StatusLabel(VisitStatus s) => s switch
+    {
+        VisitStatus.Booked => "Booked",
+        VisitStatus.CheckedIn => "Checked in",
+        VisitStatus.InProgress => "Your turn",
+        VisitStatus.Done => "Done",
+        VisitStatus.Cancelled => "Cancelled",
+        VisitStatus.NoShow => "Missed",
+        _ => s.ToString(),
+    };
+
+    private static string StatusPillClass(VisitStatus s) => s switch
+    {
+        VisitStatus.CheckedIn => "pill-primary",
+        VisitStatus.InProgress => "pill-ok",
+        VisitStatus.Cancelled or VisitStatus.NoShow => "pill-danger",
+        _ => "",
+    };
 }
