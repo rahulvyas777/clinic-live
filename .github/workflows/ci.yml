@@ -43,13 +43,15 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Set up Java 17 (Android build tools need it)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install the Android workload
-        run: dotnet workload install android
+      # A MAUI project needs the maui-android workload, not the bare android one.
+      # The first real run of this job failed with NETSDK1147 on exactly that.
+      - name: Install the MAUI Android workload
+        run: dotnet workload install maui-android
 
       - name: Build the Pocket app (Android, Release)
         run: dotnet build src/ClinicLive.Pocket -f net10.0-android --configuration Release
