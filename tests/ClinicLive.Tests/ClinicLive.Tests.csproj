@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClinicLive\ClinicLive.csproj" />
+    <!-- Season three: the Pocket app's shared logic (GeoMath) is plain C# and testable here. -->
+    <ProjectReference Include="..\..\src\ClinicLive.Pocket.Shared\ClinicLive.Pocket.Shared.csproj" />
   </ItemGroup>
 
 </Project>

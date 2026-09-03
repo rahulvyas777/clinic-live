@@ -1,5 +1,7 @@
 @page "/directions"
 @inject PocketApi Api
+@inject ILocator Locator
+@inject IHaptics Haptics
 
 <PageTitle>Find us — ClinicLive Pocket</PageTitle>
 
@@ -30,16 +32,46 @@ else
             <dt>Open</dt>
             <dd>@_clinic.OpeningHours</dd>
         </dl>
+        <button class="btn btn-primary btn-lg" @onclick="OpenMapsAsync">Open in Maps</button>
+        @if (_mapsFailed)
+        {
+            <p class="muted small" style="margin-top: var(--s-2)">No maps app answered on this device.</p>
+        }
     </section>
 
     <section class="card">
-        <p class="muted small">How far away are you, and a one-tap route — Part 7.</p>
+        <h2>How far away am I?</h2>
+        @if (_distanceKm is { } km)
+        {
+            <p class="big-label">Distance to the clinic</p>
+            <p class="big-number" style="font-size: 3rem">@GeoMath.Describe(km)</p>
+            <p class="muted small">As the crow flies — the maps app knows the roads.</p>
+        }
+        else if (_locating)
+        {
+            <p class="muted">Finding you…</p>
+        }
+        else if (_locationDenied)
+        {
+            <p class="muted">We couldn't get your location. You can allow it in your device settings, or just use the map above.</p>
+        }
+        else
+        {
+            <p class="muted">Uses your location once, only when you ask, and never sends it anywhere — the sum is done right here on the device.</p>
+        }
+        <button class="btn btn-ghost" @onclick="LocateAsync" disabled="@_locating">
+            @(_distanceKm is null ? "Use my location" : "Check again")
+        </button>
     </section>
 }
 
 @code {
     private ClinicInfo? _clinic;
     private bool _unreachable;
+    private bool _locating;
+    private bool _locationDenied;
+    private bool _mapsFailed;
+    private double? _distanceKm;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -54,5 +86,35 @@ else
         {
             _unreachable = true;
         }
+    }
+
+    private GeoPoint ClinicPoint => new(_clinic!.Latitude, _clinic.Longitude);
+
+    private async Task LocateAsync()
+    {
+        _locating = true;
+        _locationDenied = false;
+        try
+        {
+            var here = await Locator.GetCurrentAsync();
+            if (here is { } point)
+            {
+                _distanceKm = GeoMath.DistanceKm(point, ClinicPoint);
+                Haptics.Tap();
+            }
+            else
+            {
+                _locationDenied = true;
+            }
+        }
+        finally
+        {
+            _locating = false;
+        }
+    }
+
+    private async Task OpenMapsAsync()
+    {
+        _mapsFailed = !await Locator.OpenDirectionsAsync(ClinicPoint, _clinic!.Name);
     }
 }

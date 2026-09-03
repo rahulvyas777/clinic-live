@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -41,6 +41,9 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <!-- Part 7: only matters once the app is packaged (Part 10/11); unpackaged apps
+         get the classic Windows location consent instead. -->
+    <DeviceCapability Name="location" />
   </Capabilities>
 
 </Package>

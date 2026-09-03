@@ -16,6 +16,7 @@ builder.Services.AddSingleton<IAppLifecycle, AppLifecycle>();
 // visitor's circuit (IJSRuntime is per circuit).
 builder.Services.AddScoped<IHaptics, Haptics>();
 builder.Services.AddScoped<INotifier, Notifier>();
+builder.Services.AddScoped<ILocator, Locator>();
 builder.Services.AddSingleton<IPushRegistration, PushRegistration>();
 
 // This host runs on a server, so it calls the clinic server-to-server; the

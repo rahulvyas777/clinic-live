@@ -12,4 +12,16 @@
     <!-- Part 5: the attention buzz, and Android 13's runtime notification permission -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Part 7: "how far away am I?" — both, so the user can choose precise or approximate -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Part 7: Android 11+ package visibility. Google Maps was installed and "Open in
+         Maps" still reported no maps app — an app may not SEE other apps' intent
+         handlers unless it declares which ones it needs. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
 </manifest>
