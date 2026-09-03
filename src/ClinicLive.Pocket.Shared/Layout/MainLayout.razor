@@ -1,9 +1,16 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject IConnectivityInfo Connectivity
 
 <div class="app">
     <header class="app-top">
         <span class="brand">Clinic<span class="pulse">Live</span> <span class="brand-sub">Pocket</span></span>
     </header>
+
+    @if (!_online)
+    {
+        <div class="offline-banner" role="status">You're offline — showing what we last knew.</div>
+    }
 
     <main class="app-main">
         @Body
@@ -34,3 +41,30 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private bool _online = true;
+
+    protected override void OnInitialized()
+    {
+        Connectivity.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Connectivity.EnsureStartedAsync();
+            _online = Connectivity.IsOnline;
+            StateHasChanged();
+        }
+    }
+
+    private void OnChanged(bool online) => _ = InvokeAsync(() =>
+    {
+        _online = online;
+        StateHasChanged();
+    });
+
+    public void Dispose() => Connectivity.Changed -= OnChanged;
+}

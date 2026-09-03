@@ -2,6 +2,7 @@
 @inject NavigationManager Nav
 @inject ICodeScanner Scanner
 @inject IHaptics Haptics
+@inject VisitMemory Memory
 
 <PageTitle>ClinicLive Pocket</PageTitle>
 
@@ -13,8 +14,17 @@
     </p>
 </section>
 
+@if (_remembered is not null)
+{
+    <section class="card">
+        <h2>Welcome back</h2>
+        <p class="muted">Your visit is still on this phone.</p>
+        <a class="btn btn-primary btn-lg" href="visit/@_remembered">Continue with <span class="mono">@_remembered</span></a>
+    </section>
+}
+
 <section class="card">
-    <h2>Find my appointment</h2>
+    <h2>@(_remembered is null ? "Find my appointment" : "A different appointment?")</h2>
     <p class="muted">Your confirmation code is on your booking ticket.</p>
 
     <form class="stack" @onsubmit="Go" @onsubmit:preventDefault>
@@ -22,7 +32,7 @@
         <input id="code" class="code-input" @bind="_code" @bind:event="oninput"
                placeholder="••••••" maxlength="6" autocomplete="off" autocapitalize="characters"
                spellcheck="false" inputmode="text" />
-        <button class="btn btn-primary btn-lg" type="submit" disabled="@(_code.Trim().Length < 6)">
+        <button class="btn @(_remembered is null ? "btn-primary btn-lg" : "btn-ghost")" type="submit" disabled="@(_code.Trim().Length < 6)">
             Show my visit
         </button>
     </form>
@@ -42,8 +52,22 @@
 
 @code {
     private string _code = "";
+    private string? _remembered;
     private bool _scanning;
     private string? _scanMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After render, not during: the web host's storage talks to the browser.
+        if (firstRender)
+        {
+            _remembered = await Memory.GetCodeAsync();
+            if (_remembered is not null)
+            {
+                StateHasChanged();
+            }
+        }
+    }
 
     private void Go() => Nav.NavigateTo($"visit/{_code.Trim().ToUpperInvariant()}");
 

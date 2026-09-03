@@ -2,6 +2,10 @@
 @inject IPlatformInfo Platform
 @inject IHaptics Haptics
 @inject INotifier Notifier
+@inject VisitMemory Memory
+@inject IAppStorage Storage
+@inject ClinicEndpoint Clinic
+@inject NavigationManager Nav
 
 <PageTitle>Settings — ClinicLive Pocket</PageTitle>
 
@@ -10,7 +14,11 @@
 <section class="card">
     <h2>Nudges</h2>
     <p class="muted">A light tap when you're next, a proper buzz when it's your turn.</p>
-    <dl class="facts">
+    <label class="row" style="gap: var(--s-3); cursor: pointer">
+        <input type="checkbox" checked="@_nudges" @onchange="ToggleNudgesAsync" style="width: 1.4rem; height: 1.4rem" />
+        <span>Buzz and notify me about my place in the queue</span>
+    </label>
+    <dl class="facts" style="margin-top: var(--s-3)">
         <dt>Haptics</dt>
         <dd>@(Haptics.IsSupported ? "Available on this device" : "Not available here")</dd>
         <dt>Notifications</dt>
@@ -21,6 +29,46 @@
         <button class="btn btn-ghost" style="width:auto" @onclick="() => Haptics.Buzz()">Try a buzz</button>
         <button class="btn btn-ghost" style="width:auto" @onclick="TestNotificationAsync">Send a test notification</button>
     </div>
+</section>
+
+<section class="card">
+    <h2>My visit on this phone</h2>
+    @if (_rememberedCode is null)
+    {
+        <p class="muted">Nothing remembered yet. Open a visit and it stays here until you forget it.</p>
+    }
+    else
+    {
+        <p class="muted">Remembered: <span class="mono">@_rememberedCode</span> — the code is kept in the device's secure store; the last queue state is cached for when you have no signal.</p>
+        <button class="btn btn-ghost" @onclick="ForgetAsync">Forget my visit</button>
+    }
+</section>
+
+<section class="card">
+    <h2>Clinic server</h2>
+    <p class="muted small">
+        Where this app talks to. On the emulator that's your PC as <span class="mono">10.0.2.2</span>;
+        on a real phone it's your PC's Wi-Fi address. Takes effect next launch.
+    </p>
+    <dl class="facts">
+        <dt>Current</dt>
+        <dd class="mono" style="letter-spacing: 0">@Clinic.Base</dd>
+    </dl>
+    @if (Platform.Host == "Native app")
+    {
+        <div class="stack">
+            <input class="code-input" style="font-size: 1rem; letter-spacing: 0; text-transform: none; text-align: left; font-family: var(--mono)"
+                   @bind="_apiBase" placeholder="http://192.168.1.20:5159/" inputmode="url" autocapitalize="none" />
+            <div class="row">
+                <button class="btn btn-ghost" style="width:auto" @onclick="SaveApiBaseAsync">Save</button>
+                <button class="btn btn-ghost" style="width:auto" @onclick="ResetApiBaseAsync">Use default</button>
+            </div>
+            @if (_apiSaved is not null)
+            {
+                <p class="muted small">@_apiSaved</p>
+            }
+        </div>
+    }
 </section>
 
 <section class="card">
@@ -40,7 +88,30 @@
 </section>
 
 @code {
+    public const string ApiBaseKey = "api.base";
+
     private bool? _notifications;
+    private bool _nudges = true;
+    private string? _rememberedCode;
+    private string _apiBase = "";
+    private string? _apiSaved;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _nudges = await Memory.NudgesEnabledAsync();
+            _rememberedCode = await Memory.GetCodeAsync();
+            _apiBase = await Storage.GetAsync(ApiBaseKey) ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleNudgesAsync(ChangeEventArgs e)
+    {
+        _nudges = e.Value is true;
+        await Memory.SetNudgesEnabledAsync(_nudges);
+    }
 
     private async Task TestNotificationAsync()
     {
@@ -49,5 +120,29 @@
         {
             await Notifier.ShowAsync("ClinicLive Pocket", "This is what a nudge looks like.");
         }
+    }
+
+    private async Task ForgetAsync()
+    {
+        await Memory.ForgetAsync();
+        _rememberedCode = null;
+    }
+
+    private async Task SaveApiBaseAsync()
+    {
+        if (!Uri.TryCreate(_apiBase.Trim(), UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        {
+            _apiSaved = "That doesn't look like a server address (it needs http:// or https://).";
+            return;
+        }
+        await Storage.SetAsync(ApiBaseKey, uri.ToString());
+        _apiSaved = "Saved — restart the app to use it.";
+    }
+
+    private async Task ResetApiBaseAsync()
+    {
+        await Storage.SetAsync(ApiBaseKey, null);
+        _apiBase = "";
+        _apiSaved = "Back to the default next launch.";
     }
 }

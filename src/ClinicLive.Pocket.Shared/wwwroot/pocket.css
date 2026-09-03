@@ -158,6 +158,13 @@ h1[tabindex]:focus, h1[tabindex]:focus-visible { outline: none; }
 .tab.active { color: var(--primary); }
 .tab.active .tab-icon { transform: translateY(-1px); }
 
+/* offline: a calm strip under the header, not a red alarm — the app still works */
+.offline-banner {
+    background: var(--warn-soft); color: var(--warn);
+    font-weight: 600; font-size: 0.9rem; text-align: center;
+    padding: var(--s-2) var(--s-4);
+}
+
 /* ---------- surfaces ---------- */
 .card {
     background: var(--surface);
@@ -203,6 +210,9 @@ h1[tabindex]:focus, h1[tabindex]:focus-visible { outline: none; }
     background: var(--surface-2); color: var(--ink);
 }
 .code-input::placeholder { color: var(--line); letter-spacing: 0.35em; }
+
+/* native checkboxes keep their platform look, in our colour */
+input[type="checkbox"] { accent-color: var(--primary); }
 .code-input:focus { border-color: var(--primary); outline: none; }
 
 /* ---------- status language ---------- */

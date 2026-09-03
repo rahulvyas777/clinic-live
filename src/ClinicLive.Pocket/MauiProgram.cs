@@ -26,11 +26,15 @@ public static class MauiProgram
         builder.Services.AddSingleton<IPushRegistration, PushRegistration>();
         builder.Services.AddSingleton<ILocator, Locator>();
         builder.Services.AddSingleton<ICodeScanner, CodeScanner>();
+        builder.Services.AddSingleton<IConnectivityInfo, ConnectivityInfo>();
+        builder.Services.AddSingleton<IAppStorage, AppStorage>();
+        builder.Services.AddSingleton<VisitMemory>();
 
         // The clinic's API and live queue — aimed at wherever "the server" is from
-        // this device (see ApiEndpoint).
-        builder.Services.AddSingleton(new ClinicEndpoint(ApiEndpoint.Base));
-        builder.Services.AddSingleton(new HttpClient { BaseAddress = ApiEndpoint.Base, Timeout = TimeSpan.FromSeconds(10) });
+        // this device (see ApiEndpoint; Settings can override it).
+        var apiBase = ApiEndpoint.Base;
+        builder.Services.AddSingleton(new ClinicEndpoint(apiBase));
+        builder.Services.AddSingleton(new HttpClient { BaseAddress = apiBase, Timeout = TimeSpan.FromSeconds(10) });
         builder.Services.AddSingleton<PocketApi>();
         builder.Services.AddSingleton<QueueLive>();
 

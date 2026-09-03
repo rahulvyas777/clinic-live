@@ -35,4 +35,17 @@ window.pocketDevice = {
         const w = window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank", "noopener");
         return w !== null;
     },
+
+    // Part 9: storage and connectivity. localStorage is per browser profile and NOT
+    // secure — the native app keeps the code in the platform keystore; here the
+    // caveat is stated in the UI rather than hidden.
+    storageGet(key) { return localStorage.getItem(key); },
+    storageSet(key, value) { if (value === null || value === undefined) localStorage.removeItem(key); else localStorage.setItem(key, value); },
+
+    isOnline() { return navigator.onLine; },
+    watchOnline(dotnetRef) {
+        const report = () => dotnetRef.invokeMethodAsync("OnOnlineChanged", navigator.onLine);
+        window.addEventListener("online", report);
+        window.addEventListener("offline", report);
+    },
 };

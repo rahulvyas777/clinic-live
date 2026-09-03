@@ -7,23 +7,29 @@
 @inject INotifier Notifier
 @inject IPushRegistration Push
 @inject IAppLifecycle Lifecycle
+@inject VisitMemory Memory
+@inject NavigationManager Nav
 
 <PageTitle>My visit — ClinicLive Pocket</PageTitle>
 
 <div class="row" style="justify-content: space-between; margin-bottom: var(--s-3)">
     <h1 style="margin: 0">My visit</h1>
-    @if (_visit is not null && !_connected)
+    @if (_visit is not null && !_connected && !_stale)
     {
         <span class="pill pill-warn">reconnecting…</span>
     }
 </div>
 
-@if (Code is null)
+@if (Code is null && !_redirecting)
 {
     <section class="card">
         <p class="muted">Enter your confirmation code on the Home tab to see your visit here.</p>
         <a class="btn btn-ghost" href="">Go to Home</a>
     </section>
+}
+else if (Code is null)
+{
+    <section class="card"><p class="muted">Opening your visit…</p></section>
 }
 else if (_loading && _visit is null)
 {
@@ -49,6 +55,13 @@ else if (_visit is null)
 }
 else
 {
+    @if (_stale)
+    {
+        <div class="notice">
+            Showing what the clinic said at <strong>@_staleSince</strong> — we can't reach it right now.
+        </div>
+    }
+
     <section class="card">
         <div class="row" style="justify-content: space-between">
             <h2 style="margin:0">Hi @_visit.FirstName</h2>
@@ -66,7 +79,7 @@ else
                 {
                     <div class="notice">@_checkInError</div>
                 }
-                <button class="btn btn-primary btn-lg" @onclick="CheckInAsync" disabled="@_busy">
+                <button class="btn btn-primary btn-lg" @onclick="CheckInAsync" disabled="@(_busy || _stale)">
                     @(_busy ? "Checking in…" : "I'm here — check me in")
                 </button>
                 break;
@@ -114,7 +127,7 @@ else
         }
     </section>
 
-    @if (_visit.Status is VisitStatus.Booked or VisitStatus.CheckedIn)
+    @if (_visit.Status is VisitStatus.Booked or VisitStatus.CheckedIn && !_stale)
     {
         <p class="muted small" style="text-align:center">
             @(_connected ? "Live — updates the moment the queue moves." : "Showing the last thing the clinic told us.")
@@ -130,6 +143,9 @@ else
     private bool _unreachable;
     private bool _busy;
     private bool _connected;
+    private bool _redirecting;
+    private bool _stale;
+    private string? _staleSince;
     private bool? _notifications;   // null = never asked
     private bool _pushRegistered;
     private bool _skipNextNudge;    // the push already told them while we were away
@@ -146,6 +162,20 @@ else
     }
 
     protected override Task OnParametersSetAsync() => Code is null ? Task.CompletedTask : LoadAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The tab was tapped with no code: open the remembered visit, if there is one.
+        if (firstRender && Code is null)
+        {
+            var remembered = await Memory.GetCodeAsync();
+            if (remembered is not null)
+            {
+                _redirecting = true;
+                Nav.NavigateTo($"visit/{remembered}", replace: true);
+            }
+        }
+    }
 
     private void OnQueueChanged() => _ = InvokeAsync(async () =>
     {
@@ -181,13 +211,20 @@ else
         {
             var before = _visit;
             _visit = await Api.GetVisitAsync(Code!);
+            _stale = false;
+
+            if (_visit is not null)
+            {
+                await Memory.RememberAsync(_visit);   // Part 9: survives a closed app and a dead signal
+            }
+
             if (before is not null && _visit is not null)
             {
                 if (_skipNextNudge)
                 {
                     _skipNextNudge = false;
                 }
-                else
+                else if (await Memory.NudgesEnabledAsync())
                 {
                     await NudgeIfItMattersAsync(before, _visit);
                 }
@@ -203,6 +240,13 @@ else
         catch (ClinicUnreachableException)
         {
             _unreachable = true;
+            // Part 9: no signal, but maybe a memory. Only THIS visit's memory counts.
+            if (_visit is null && await Memory.GetCachedAsync() is { } cached && cached.Visit.Code == Code)
+            {
+                _visit = cached.Visit;
+                _stale = true;
+                _staleSince = cached.StoredAtUtc.ToLocalTime().ToString("HH:mm");
+            }
         }
         finally
         {
