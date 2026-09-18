@@ -68,6 +68,9 @@ builder.Services.AddSingleton<Microsoft.Extensions.AI.IEmbeddingGenerator<string
     new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.EmbeddingModel));
 builder.Services.AddScoped<ClinicLive.Services.Ai.KnowledgeIngester>();
 
+// Part 7: the search that grounds every answer. Scoped — it opens a short-lived DbContext.
+builder.Services.AddScoped<ClinicLive.Services.Ai.KnowledgeRetriever>();
+
 // Push notifications (season three, Part 6). Configured = a Firebase service-account
 // file OUTSIDE the repo (user-secrets locally, server config in production).
 // Unconfigured = NullPushSender, which logs what it would have sent. Same app,

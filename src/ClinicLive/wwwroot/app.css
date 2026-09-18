@@ -402,6 +402,14 @@ main.page {
     padding: var(--s-2) var(--s-3);
 }
 .chat-msg.mine .chat-bubble { background: var(--primary-soft); }
+
+/* season four, Part 7: the documents an assistant answer stood on, under its bubble */
+.chat-cites { display: block; margin-top: var(--s-1); }
+.chat-cite {
+    display: block; font-size: 0.72rem; line-height: 1.5;
+    color: var(--muted); cursor: help;
+}
+
 .chat-typing { min-height: 1.3rem; color: var(--muted); font-size: 0.85rem; margin: var(--s-2) 0; }
 .chat-online { list-style: none; margin: 0; padding: 0; }
 .chat-online li { padding: var(--s-1) 0; }

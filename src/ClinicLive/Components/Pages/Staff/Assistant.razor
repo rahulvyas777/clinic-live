@@ -21,6 +21,15 @@
                 <div class="chat-msg @(turn.Mine ? "mine" : "")" @key="turn">
                     <span class="chat-meta"><strong>@(turn.Mine ? "You" : "Assistant")</strong></span>
                     <span class="chat-bubble">@turn.Text</span>
+                    @if (turn.Cites.Count > 0)
+                    {
+                        <span class="chat-cites">
+                            @foreach (var cite in turn.Cites)
+                            {
+                                <span class="chat-cite" title="@cite.Chunk.Preview">[@cite.Number] @cite.Chunk.Label</span>
+                            }
+                        </span>
+                    }
                 </div>
             }
             @if (_thinking)
@@ -54,7 +63,13 @@
     {
         public bool Mine { get; init; }
         public string Text { get; set; } = string.Empty;
+
+        /// <summary>The documents under the bubble. Empty for a question and for a refusal.</summary>
+        public List<Citation> Cites { get; set; } = [];
     }
+
+    /// <summary>A retrieved chunk and the number the prompt gave it, so [2] means [2].</summary>
+    private sealed record Citation(int Number, RetrievedChunk Chunk);
 
     private async Task AskAsync()
     {
@@ -73,8 +88,22 @@
 
         try
         {
-            await foreach (var delta in AssistantSvc.AskAsync(question, "staff", CancellationToken.None))
+            // Retrieval finishes before the first token, so the chunks are in hand already.
+            var reply = await AssistantSvc.AskAsync(question, "staff", CancellationToken.None);
+            var guarded = false;
+
+            await foreach (var delta in reply.Deltas)
             {
+                if (delta == AssistantService.GuardMarker)
+                {
+                    // The service found the finished answer had no citation. Whatever is on
+                    // screen was never allowed to stand: replace it with the refusal.
+                    guarded = true;
+                    answer.Text = AssistantService.RefusalText;
+                    answer.Cites = [];
+                    continue;
+                }
+
                 if (_thinking)
                 {
                     // First token: swap the "thinking…" line for the bubble it fills.
@@ -90,8 +119,13 @@
             {
                 // The model streamed nothing at all — still owe the user a bubble.
                 _thinking = false;
-                answer.Text = "I don't know that; please ask reception.";
+                answer.Text = AssistantService.RefusalText;
                 _turns.Add(answer);
+            }
+
+            if (!guarded)
+            {
+                answer.Cites = Citations(reply.Chunks, answer.Text);
             }
         }
         catch (Exception ex)
@@ -106,6 +140,28 @@
             _streaming = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    /// <summary>
+    /// Which documents to print under the bubble: the ones the answer's "Sources:" line names.
+    /// A refusal cites nothing. An answer that cited no usable number still stands on the
+    /// chunks it was given — the guard let it through — so those are shown instead.
+    /// </summary>
+    private static List<Citation> Citations(IReadOnlyList<RetrievedChunk> chunks, string answer)
+    {
+        if (chunks.Count == 0 || AssistantService.IsRefusal(answer))
+        {
+            return [];
+        }
+
+        var cited = AssistantService.CitedNumbers(answer)
+            .Where(n => n >= 1 && n <= chunks.Count)
+            .Select(n => new Citation(n, chunks[n - 1]))
+            .ToList();
+
+        return cited.Count > 0
+            ? cited
+            : chunks.Select((c, i) => new Citation(i + 1, c)).ToList();
     }
 
     private Task OnKeyDown(KeyboardEventArgs e) =>

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace ClinicLive.Services.Ai;
 
 /// <summary>
@@ -9,12 +11,19 @@ namespace ClinicLive.Services.Ai;
 /// <param name="EmbeddingModel">The model that embeds knowledge chunks (Part 6).</param>
 /// <param name="KeepAlive">How long Ollama keeps the model in VRAM between questions.</param>
 /// <param name="MaxContextChunks">How many retrieved chunks a grounded answer may use (Part 7).</param>
+/// <param name="MaxDistance">
+/// The furthest a chunk may sit from the question and still be worth prompting with (Part 7).
+/// Cosine distance, so 0 is the same text and 1 is unrelated; above this the chunk is dropped,
+/// and when nothing survives the model is never called at all — the refusal is cheaper and
+/// more honest than asking a 14B model to admit it has nothing.
+/// </param>
 public record AiOptions(
     string Endpoint,
     string ChatModel,
     string EmbeddingModel,
     string KeepAlive,
-    int MaxContextChunks)
+    int MaxContextChunks,
+    double MaxDistance)
 {
     /// <summary>Bind from configuration, with the spec's defaults if a key is missing.</summary>
     public static AiOptions FromConfiguration(IConfiguration config) => new(
@@ -22,5 +31,8 @@ public record AiOptions(
         config["Ai:ChatModel"] ?? "qwen2.5:14b",
         config["Ai:EmbeddingModel"] ?? "nomic-embed-text",
         config["Ai:KeepAlive"] ?? "24h",
-        int.TryParse(config["Ai:MaxContextChunks"], out var chunks) ? chunks : 6);
+        int.TryParse(config["Ai:MaxContextChunks"], out var chunks) ? chunks : 6,
+        double.TryParse(config["Ai:MaxDistance"], NumberStyles.Float, CultureInfo.InvariantCulture, out var distance)
+            ? distance
+            : 0.55);
 }

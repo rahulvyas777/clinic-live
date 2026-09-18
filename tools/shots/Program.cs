@@ -193,7 +193,21 @@ if (assistantQuestion is not null)
         }
     }
 
-    Console.WriteLine($"  answer: {lastText.Length} chars");
+    // Part 7: print the answer and its citations, not just a character count — the whole
+    // point of this run is reading what the model actually said and which documents it used.
+    Console.WriteLine($"  answer ({lastText.Length} chars):");
+    Console.WriteLine("  ---");
+    foreach (var line in lastText.Replace("\r\n", "\n").Split('\n'))
+    {
+        Console.WriteLine("  " + line);
+    }
+
+    Console.WriteLine("  ---");
+    foreach (var cite in await ap.QuerySelectorAllAsync(".chat-cite"))
+    {
+        Console.WriteLine("  cite: " + (await cite.InnerTextAsync()).Trim());
+    }
+
     await ap.ScreenshotAsync(new() { Path = Path.Combine(outDir, "staff-assistant.png") });
     Console.WriteLine("  staff-assistant.png");
     await ap.CloseAsync();
