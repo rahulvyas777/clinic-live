@@ -1,0 +1,19 @@
+# /etc/systemd/system/ollama-warm.service
+# Part 11: load the chat and embedding models so the first question of the day
+# is not the slow one. Started by ollama-warm.timer, never enabled on its own.
+[Unit]
+Description=Warm the Ollama chat and embedding models
+After=ollama.service
+Requires=ollama.service
+
+[Service]
+Type=oneshot
+# The `ollama ps` line in warm.sh resolves the model directory from $HOME, and a systemd
+# unit is started with no HOME at all: without this the script dies with
+# "panic: $HOME is not defined" AFTER both models are already loaded, which reads as a
+# failed warm-up that in fact succeeded. /usr/share/ollama is the service user's home.
+Environment="HOME=/usr/share/ollama"
+ExecStart=/usr/local/bin/ollama-warm.sh
+# A warm-up that fails must not mask a healthy runtime: the next timer tick retries.
+SuccessExitStatus=0
+TimeoutStartSec=300

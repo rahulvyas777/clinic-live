@@ -65,3 +65,9 @@ ollama ps                  # both models, 100% GPU
 ```
 
 Logs: `journalctl -u ollama -f`. Memory: `nvidia-smi` for the GPU, `free -h` for the CPU fallback.
+
+## Once it is running
+
+`OPERATIONS.md` is the runbook for the clinic: the warm-up timer (`install-warm-timer.sh`,
+`ollama-warm.service`, `ollama-warm.timer`), runtime and model updates, knowledge updates,
+backups, logs, disk, the health check and the monthly cost.

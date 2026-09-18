@@ -1,0 +1,16 @@
+# /etc/systemd/system/ollama-warm.timer
+# Part 11: 60 s after boot, then every 6 hours. OLLAMA_KEEP_ALIVE=24h already holds
+# the models in memory; this timer is the belt to that pair of braces, so an unattended
+# reboot or an evicted model never costs a member of staff the cold-load minute.
+[Unit]
+Description=Warm the Ollama models after boot and every 6 hours
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=6h
+AccuracySec=1min
+Persistent=false
+Unit=ollama-warm.service
+
+[Install]
+WantedBy=timers.target
