@@ -1,0 +1,113 @@
+@page "/staff/assistant"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using ClinicLive.Services.Ai
+@inject AssistantService AssistantSvc
+@inject ILogger<Assistant> Logger
+
+<PageTitle>Assistant — ClinicLive</PageTitle>
+
+<header class="staff-head">
+    <h1>Assistant</h1>
+</header>
+
+<div class="card" style="max-width: 46rem;">
+    <div class="card-body">
+        <p class="text-muted">Answers come from the clinic's own server. Nothing leaves the building.</p>
+
+        <div class="chat-log" role="log" aria-label="Assistant transcript">
+            @foreach (var turn in _turns)
+            {
+                <div class="chat-msg @(turn.Mine ? "mine" : "")" @key="turn">
+                    <span class="chat-meta"><strong>@(turn.Mine ? "You" : "Assistant")</strong></span>
+                    <span class="chat-bubble">@turn.Text</span>
+                </div>
+            }
+            @if (_thinking)
+            {
+                <div class="chat-msg">
+                    <span class="chat-meta">thinking…</span>
+                </div>
+            }
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <input class="form-control" maxlength="500" placeholder="Ask the assistant…"
+                   @bind="_draft" @bind:event="oninput" @onkeydown="OnKeyDown"
+                   disabled="@_streaming" />
+            <button class="btn btn-primary" @onclick="AskAsync"
+                    disabled="@(_streaming || string.IsNullOrWhiteSpace(_draft))">
+                Send
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // One transcript per circuit. Part 5 stores nothing: close the tab, it is gone.
+    private readonly List<Turn> _turns = [];
+    private string _draft = string.Empty;
+    private bool _streaming;
+    private bool _thinking;
+
+    private sealed class Turn
+    {
+        public bool Mine { get; init; }
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private async Task AskAsync()
+    {
+        var question = _draft.Trim();
+        if (question.Length == 0 || _streaming)
+        {
+            return;
+        }
+
+        _draft = string.Empty;
+        _streaming = true;
+        _thinking = true;
+        _turns.Add(new Turn { Mine = true, Text = question });
+
+        var answer = new Turn();
+
+        try
+        {
+            await foreach (var delta in AssistantSvc.AskAsync(question, "staff", CancellationToken.None))
+            {
+                if (_thinking)
+                {
+                    // First token: swap the "thinking…" line for the bubble it fills.
+                    _thinking = false;
+                    _turns.Add(answer);
+                }
+
+                answer.Text += delta;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            if (_thinking)
+            {
+                // The model streamed nothing at all — still owe the user a bubble.
+                _thinking = false;
+                answer.Text = "I don't know that; please ask reception.";
+                _turns.Add(answer);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The assistant failed to answer");
+            _thinking = false;
+            _turns.Remove(answer);
+            _turns.Add(new Turn { Text = "The assistant is not available right now." });
+        }
+        finally
+        {
+            _streaming = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" ? AskAsync() : Task.CompletedTask;
+}

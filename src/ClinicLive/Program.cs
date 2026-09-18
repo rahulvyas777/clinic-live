@@ -53,6 +53,14 @@ builder.Services.AddSingleton<ClinicLive.Services.ChatRoom>();
 builder.Services.AddScoped<ClinicLive.Services.PocketService>();
 builder.Services.AddSignalR();
 
+// Season four: the assistant runs on the clinic's own box. One HTTP client to Ollama,
+// shared by every circuit (singleton); the service that wraps it is per-circuit.
+var ai = ClinicLive.Services.Ai.AiOptions.FromConfiguration(builder.Configuration);
+builder.Services.AddSingleton(ai);
+builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(
+    new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.ChatModel));
+builder.Services.AddScoped<ClinicLive.Services.Ai.AssistantService>();
+
 // Push notifications (season three, Part 6). Configured = a Firebase service-account
 // file OUTSIDE the repo (user-secrets locally, server config in production).
 // Unconfigured = NullPushSender, which logs what it would have sent. Same app,

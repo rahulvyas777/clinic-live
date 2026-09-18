@@ -1,18 +1,20 @@
 using Microsoft.Playwright;
 
 // Screenshot harness for the ClinicLive redesign series.
-// Usage: dotnet run -- <outputDir> [baseUrl] [--checkin CODE] [--chat "message"]
+// Usage: dotnet run -- <outputDir> [baseUrl] [--checkin CODE] [--chat "message"] [--assistant "question"]
 // Captures every surface at its natural device size; logs in for staff pages.
 
 var outDir = args.Length > 0 ? args[0] : "shots-out";
 var baseUrl = args.Length > 1 && !args[1].StartsWith("--") ? args[1] : "http://localhost:5391";
 string? checkinCode = null;
 string? chatMessage = null;
+string? assistantQuestion = null;
 var callNext = args.Contains("--callnext");
 for (var i = 0; i < args.Length - 1; i++)
 {
     if (args[i] == "--checkin") checkinCode = args[i + 1];
     if (args[i] == "--chat") chatMessage = args[i + 1];
+    if (args[i] == "--assistant") assistantQuestion = args[i + 1];
 }
 
 Directory.CreateDirectory(outDir);
@@ -157,6 +159,44 @@ if (chatMessage is not null)
 else
 {
     await Shot(staff, "/staff/chat", "staff-chat");
+}
+
+// --assistant "question" — season four, Part 5. Ask the local model and wait for it to
+// finish. There is no "done" signal in the DOM, so we watch the last bubble: when its text
+// has not changed for 1.5 s the stream has stopped. A 14B model on a warm card takes
+// 10–40 s, so the ceiling is generous.
+if (assistantQuestion is not null)
+{
+    Console.WriteLine($"asking the assistant: {assistantQuestion}");
+    var ap = await staff.NewPageAsync();
+    await ap.GotoAsync($"{baseUrl}/staff/assistant", new() { WaitUntil = WaitUntilState.NetworkIdle });
+    await ap.WaitForTimeoutAsync(600);   // let the circuit connect before typing
+    await ap.FillAsync("input[placeholder*='Ask the assistant']", assistantQuestion);
+    await ap.PressAsync("input[placeholder*='Ask the assistant']", "Enter");
+
+    var lastText = "";
+    var stableFor = 0;
+    for (var waited = 0; waited < 90_000; waited += 300)
+    {
+        await ap.WaitForTimeoutAsync(300);
+        var bubbles = await ap.QuerySelectorAllAsync(".chat-bubble");
+        var text = bubbles.Count > 1 ? await bubbles[^1].InnerTextAsync() : "";
+        if (text.Length > 0 && text == lastText)
+        {
+            stableFor += 300;
+            if (stableFor >= 1500) break;
+        }
+        else
+        {
+            stableFor = 0;
+            lastText = text;
+        }
+    }
+
+    Console.WriteLine($"  answer: {lastText.Length} chars");
+    await ap.ScreenshotAsync(new() { Path = Path.Combine(outDir, "staff-assistant.png") });
+    Console.WriteLine("  staff-assistant.png");
+    await ap.CloseAsync();
 }
 
 Console.WriteLine($"done → {Path.GetFullPath(outDir)}");
