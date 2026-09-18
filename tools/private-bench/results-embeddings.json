@@ -1,0 +1,38 @@
+[
+ [
+  "hit",
+  0.834,
+  "What time do you open on Saturday?",
+  "Opening hours: Monday to Saturday 9:00 to 13:00 an"
+ ],
+ [
+  "miss",
+  0.41,
+  "What time do you open on Saturday?",
+  "Parking: two-wheelers in the basement; cars at the"
+ ],
+ [
+  "hit",
+  0.704,
+  "How much does a senior pay?",
+  "senior citizens (60 and above) pay 450 for a gener"
+ ],
+ [
+  "miss",
+  0.307,
+  "How much does a senior pay?",
+  "Blood test reports are ready by 18:00 on the same "
+ ],
+ [
+  "hit",
+  0.556,
+  "Where can I leave my scooter?",
+  "Parking: two-wheelers in the basement; cars at the"
+ ],
+ [
+  "miss",
+  0.457,
+  "Where can I leave my scooter?",
+  "Cancellations: free up to 2 hours before the slot"
+ ]
+]
