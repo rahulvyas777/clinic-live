@@ -11,10 +11,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<QueueEntry> QueueEntries => Set<QueueEntry>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
+    public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
+    public DbSet<KnowledgeChunk> KnowledgeChunks => Set<KnowledgeChunk>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Season four, Part 6: the embedding column is vector(768), which only exists
+        // once the extension is installed. Declaring it here puts CREATE EXTENSION in
+        // the migration, so a fresh database gets it before the table.
+        builder.HasPostgresExtension("vector");
 
         builder.Entity<Patient>(e =>
         {
@@ -74,6 +81,43 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(d => d.Token).IsUnique();
             e.HasIndex(d => d.AppointmentId);
             e.HasOne(d => d.Appointment).WithMany().OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<KnowledgeDocument>(e =>
+        {
+            e.ToTable("knowledge_document");
+            e.Property(d => d.Slug).HasMaxLength(100);
+            e.Property(d => d.Title).HasMaxLength(200);
+            e.Property(d => d.Audience).HasMaxLength(10);
+            e.Property(d => d.SourcePath).HasMaxLength(400);
+            e.Property(d => d.ContentHash).HasMaxLength(64);
+            e.HasIndex(d => d.Slug).IsUnique().HasDatabaseName("ix_knowledge_document_slug");
+
+            // Visibility is data, not a prompt instruction. A raw INSERT with
+            // audience = 'everyone' would quietly leak staff rates to the kiosk.
+            e.ToTable(t => t.HasCheckConstraint(
+                "ck_knowledge_document_audience", "audience IN ('public', 'staff')"));
+        });
+
+        builder.Entity<KnowledgeChunk>(e =>
+        {
+            e.ToTable("knowledge_chunk");
+            e.Property(c => c.Heading).HasMaxLength(200);
+            e.Property(c => c.Embedding).HasColumnType("vector(768)");
+            e.HasOne(c => c.Document).WithMany(d => d.Chunks).OnDelete(DeleteBehavior.Cascade);
+
+            // Re-ingesting a document deletes its chunks and renumbers from 0; the
+            // unique index is what catches a half-finished run leaving a duplicate.
+            e.HasIndex(c => new { c.DocumentId, c.Ordinal })
+                .IsUnique()
+                .HasDatabaseName("ix_knowledge_chunk_document_id_ordinal");
+
+            // Approximate nearest-neighbour search by cosine distance (Part 7 queries it).
+            // HNSW builds on an empty table and stays usable while rows are inserted.
+            e.HasIndex(c => c.Embedding)
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops")
+                .HasDatabaseName("ix_knowledge_chunk_embedding");
         });
     }
 }

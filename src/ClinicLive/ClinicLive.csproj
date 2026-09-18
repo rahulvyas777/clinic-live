@@ -24,6 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="OllamaSharp" Version="5.4.30" />
+    <PackageReference Include="Pgvector" Version="0.3.2" />
+    <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
     <!-- The QR code on the booking ticket (season three, Part 8) -->
     <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>

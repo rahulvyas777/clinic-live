@@ -27,8 +27,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // Factory, not plain AddDbContext: interactive Blazor components outlive a request,
 // so each operation needs its own short-lived context. (The factory also registers
 // a scoped ApplicationDbContext, which Identity keeps using.)
+// UseVector teaches Npgsql the pgvector types; without it the vector(768) column on
+// knowledge_chunk comes back as an unmapped "vector" and every read throws.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+    options.UseNpgsql(connectionString, npg => npg.UseVector()).UseSnakeCaseNamingConvention());
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -61,6 +63,11 @@ builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(
     new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.ChatModel));
 builder.Services.AddScoped<ClinicLive.Services.Ai.AssistantService>();
 
+// Part 6: the same Ollama box, a different model — embeddings, 768 dimensions.
+builder.Services.AddSingleton<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>(
+    new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.EmbeddingModel));
+builder.Services.AddScoped<ClinicLive.Services.Ai.KnowledgeIngester>();
+
 // Push notifications (season three, Part 6). Configured = a Firebase service-account
 // file OUTSIDE the repo (user-secrets locally, server config in production).
 // Unconfigured = NullPushSender, which logs what it would have sent. Same app,
@@ -81,6 +88,28 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await DbSeeder.SeedAsync(scope.ServiceProvider, app.Environment.IsDevelopment());
+}
+
+// `dotnet run --project src/ClinicLive -- ingest` loads the clinic's markdown into
+// pgvector and stops. Same host, same configuration, same migrations as the web app —
+// a separate console project would have had to duplicate all three.
+if (args.Contains("ingest", StringComparer.OrdinalIgnoreCase))
+{
+    using var ingestScope = app.Services.CreateScope();
+    var ingester = ingestScope.ServiceProvider.GetRequiredService<ClinicLive.Services.Ai.KnowledgeIngester>();
+    var results = await ingester.IngestAsync();
+
+    var slugWidth = Math.Max(4, results.Count == 0 ? 4 : results.Max(r => r.Slug.Length));
+    Console.WriteLine();
+    Console.WriteLine($"{"slug".PadRight(slugWidth)}  {"audience",-8}  {"chunks",6}  status");
+    Console.WriteLine($"{new string('-', slugWidth)}  {new string('-', 8)}  {new string('-', 6)}  --------");
+    foreach (var r in results)
+    {
+        Console.WriteLine($"{r.Slug.PadRight(slugWidth)}  {r.Audience,-8}  {r.ChunkCount,6}  {(r.Skipped ? "skipped" : "embedded")}");
+    }
+    Console.WriteLine();
+    Console.WriteLine($"{results.Count} documents, {results.Sum(r => r.ChunkCount)} chunks, {results.Count(r => r.Skipped)} skipped.");
+    return 0;
 }
 
 // Configure the HTTP request pipeline.
@@ -112,3 +141,6 @@ app.MapPocketApi();
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+// The ingest branch above returns an exit code, so this path needs one too.
+return 0;

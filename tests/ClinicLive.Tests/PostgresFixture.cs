@@ -8,12 +8,13 @@ namespace ClinicLive.Tests;
 
 /// <summary>
 /// One real PostgreSQL 18 container for the whole test collection — integration
-/// tests run against the same engine as production, not a fake.
+/// tests run against the same engine as production, not a fake. The pgvector
+/// image, because season four's knowledge chunks store a vector(768) column.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:18")
+        .WithImage("pgvector/pgvector:pg18")
         .Build();
 
     public string ConnectionString => _container.GetConnectionString();
@@ -36,7 +37,7 @@ public sealed class PostgresFixture : IAsyncLifetime
             .BuildServiceProvider();
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(ConnectionString, npg => npg.UseVector())
             .UseSnakeCaseNamingConvention()
             .UseApplicationServiceProvider(identityServices)
             .Options;

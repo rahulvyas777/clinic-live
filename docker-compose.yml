@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:18
+    # Season four, Part 6: knowledge chunks store a vector(768) column, so the
+    # engine needs pgvector. Same PostgreSQL 18, same data layout, same port.
+    image: pgvector/pgvector:pg18
     container_name: cliniclive-pg
     environment:
       POSTGRES_USER: cliniclive
