@@ -1,0 +1,133 @@
+@page "/ask"
+@implements IDisposable
+@inject PocketApi Api
+@inject IConnectivityInfo Connectivity
+@inject IHaptics Haptics
+
+<PageTitle>Ask the clinic — ClinicLive Pocket</PageTitle>
+
+<h1>Ask the clinic</h1>
+
+<section class="card">
+    <p class="muted">
+        Opening times, what to bring, parking, how to pay. The answer comes from the clinic's
+        own computer, from the clinic's own notes — your question never leaves the building.
+    </p>
+
+    <form class="stack" @onsubmit="AskAsync" @onsubmit:preventDefault>
+        <label class="visually-hidden" for="question">Your question</label>
+        <input id="question" class="ask-input" @bind="_question" @bind:event="oninput"
+               placeholder="Where can I park?" maxlength="@AssistantContract.MaxQuestionLength"
+               autocomplete="off" disabled="@_asking" />
+        <button class="btn btn-primary btn-lg" type="submit"
+                disabled="@(_asking || !AssistantContract.IsAskable(_question))">
+            @(_asking ? "Asking…" : "Send")
+        </button>
+    </form>
+
+    <p class="muted small" style="margin-bottom: 0">
+        Not medical advice. For anything about your health, speak to the doctor.
+    </p>
+</section>
+
+@if (_error is not null)
+{
+    <section class="card">
+        <div class="notice notice-danger">@_error</div>
+        <button class="btn btn-ghost" @onclick="AskAsync" disabled="@_asking">Try again</button>
+    </section>
+}
+else if (_asking)
+{
+    <section class="card">
+        <p class="asked">“@_asked”</p>
+        <p class="muted">Thinking… the clinic's own model writes this one word by word.</p>
+    </section>
+}
+else if (_answer is not null)
+{
+    <section class="card">
+        <p class="asked">“@_asked”</p>
+
+        @* The refusal is fixed text and is shown exactly as it arrived — the one sentence the
+           assistant is allowed to fail with, never a paraphrase of it. *@
+        <p class="ask-answer">@_answer.Text</p>
+
+        @if (_answer.Sources.Count > 0)
+        {
+            <ul class="ask-cites">
+                @foreach (var source in _answer.Sources)
+                {
+                    <li class="ask-cite">@source</li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    private string _question = "";
+    private string _asked = "";
+    private bool _asking;
+    private AssistantAnswer? _answer;
+    private string? _error;
+    private CancellationTokenSource? _cts;
+
+    /// <summary>The one thing to say when the clinic is out of reach. Nothing else is knowable.</summary>
+    private const string Offline = "The clinic's assistant needs a connection.";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Capability #8 — the web host can only ask the browser after the first render.
+        if (firstRender)
+        {
+            await Connectivity.EnsureStartedAsync();
+        }
+    }
+
+    private async Task AskAsync()
+    {
+        var question = string.IsNullOrWhiteSpace(_question) ? _asked : _question.Trim();
+        if (_asking || !AssistantContract.IsAskable(question))
+        {
+            return;
+        }
+
+        _asked = question;
+        _question = "";
+        _answer = null;
+        _error = null;
+
+        // A car park has one bar and a basement has none: say so before spending two minutes
+        // discovering it. The same check the rest of the app makes, in the same words.
+        if (!Connectivity.IsOnline)
+        {
+            _error = Offline;
+            return;
+        }
+
+        _asking = true;
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            _answer = await Api.AskAsync(question, _cts.Token);
+            Haptics.Tap();
+        }
+        catch (ClinicUnreachableException)
+        {
+            _error = Offline;
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went away mid-answer. Nothing to show and nobody to show it to.
+        }
+        finally
+        {
+            _asking = false;
+        }
+    }
+
+    public void Dispose() => _cts?.Cancel();
+}

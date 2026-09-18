@@ -242,6 +242,25 @@ input[type="checkbox"] { accent-color: var(--primary); }
 }
 .big-label { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
 
+/* ---------- ask the clinic (season four, Part 9) ---------- */
+.ask-input {
+    width: 100%; font: inherit; font-size: 1.05rem;
+    padding: var(--s-3);
+    border: 2px solid var(--line); border-radius: var(--radius);
+    background: var(--surface-2); color: var(--ink);
+}
+.ask-input:focus { border-color: var(--primary); outline: none; }
+.ask-input::placeholder { color: var(--muted); }
+
+.asked { color: var(--muted); font-style: italic; margin-bottom: var(--s-3); }
+
+/* pre-wrap: the model writes its own line breaks, and they are usually the right ones */
+.ask-answer { font-size: 1.15rem; line-height: 1.5; white-space: pre-wrap; margin: 0; }
+
+.ask-cites { list-style: none; margin: var(--s-3) 0 0; padding: var(--s-3) 0 0; border-top: 1px solid var(--line); }
+.ask-cite { color: var(--muted); font-size: 0.875rem; }
+.ask-cite::before { content: "From: "; }
+
 /* @key on the number: a changed position re-renders the element, and the entry
    animation is the update cue — no JS, no toast (Season 2, Part 9). */
 .big-number { animation: rise-in 320ms ease-out; }

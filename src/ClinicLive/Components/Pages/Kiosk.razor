@@ -2,8 +2,13 @@
 @layout ClinicLive.Components.Layout.BareLayout
 @rendermode InteractiveServer
 @implements IDisposable
+@using ClinicLive.Contracts
+@using ClinicLive.Domain
 @using ClinicLive.Services
+@using ClinicLive.Services.Ai
 @inject QueueService Queue
+@inject AssistantService AssistantSvc
+@inject ILogger<Kiosk> Logger
 
 <PageTitle>Check in — ClinicLive</PageTitle>
 
@@ -41,6 +46,62 @@ else
     </div>
 }
 
+@* Part 9: the patient assistant, on the appliance that is already in front of the patient.
+   Public documents only, and it says so — a waiting room is a public place and the person at
+   the kiosk is standing where everyone can read the screen. *@
+<div class="kiosk kiosk-ask">
+    <h2>Ask a question</h2>
+
+    @if (_answer is null && !_asking)
+    {
+        <p class="kiosk-hint">About opening times, what to bring, parking, how to pay.</p>
+
+        <input class="kiosk-ask-input" maxlength="@AssistantContract.MaxQuestionLength"
+               autocomplete="off" aria-label="Your question for the clinic"
+               placeholder="Ask a question…"
+               @bind="_question" @bind:event="oninput" @onkeydown="OnAskKeyDown" />
+
+        <button class="btn btn-primary btn-lg kiosk-ask-send" @onclick="AskAsync"
+                disabled="@(!AssistantContract.IsAskable(_question))">
+            Send
+        </button>
+    }
+    else
+    {
+        <p class="kiosk-asked">“@_asked”</p>
+
+        <div class="kiosk-answer" role="status" aria-live="polite">
+            @if (_answer is null)
+            {
+                <p class="kiosk-answer-wait">Asking the clinic's own assistant…</p>
+            }
+            else
+            {
+                <p class="kiosk-answer-text">@AssistantContract.WithoutSourcesLine(_answer)</p>
+
+                @if (_cites.Count > 0)
+                {
+                    <ul class="kiosk-cites">
+                        @foreach (var cite in _cites)
+                        {
+                            <li class="kiosk-cite">@cite</li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+
+        <button class="btn btn-lg kiosk-ask-again" @onclick="ClearAsk" disabled="@_asking">
+            Ask another
+        </button>
+    }
+
+    <p class="kiosk-ask-foot">
+        Answered by the clinic's own computer, from the clinic's own notes. Nothing you type
+        leaves the building — and nothing here is medical advice.
+    </p>
+</div>
+
 @code {
     private string _code = string.Empty;
     private bool _busy;
@@ -74,5 +135,154 @@ else
         }
     }
 
-    public void Dispose() => _resetCts?.Cancel();
+    // ---- Part 9: the patient assistant ----
+
+    /// <summary>How long an answer stays on a shared screen before the kiosk forgets it.</summary>
+    private static readonly TimeSpan AskIdleReset = TimeSpan.FromSeconds(60);
+
+    private string _question = string.Empty;
+    private string _asked = string.Empty;
+    private string? _answer;
+    private List<string> _cites = [];
+    private bool _asking;
+    private CancellationTokenSource? _askResetCts;
+
+    private Task OnAskKeyDown(KeyboardEventArgs e)
+    {
+        RestartAskTimer();   // typing counts as interaction, so the 60 s clock starts over
+        return e.Key == "Enter" ? AskAsync() : Task.CompletedTask;
+    }
+
+    private async Task AskAsync()
+    {
+        var question = _question.Trim();
+        if (_asking || !AssistantContract.IsAskable(question))
+        {
+            return;
+        }
+
+        _asked = question;
+        _question = string.Empty;
+        _answer = null;
+        _cites = [];
+        _asking = true;
+        RestartAskTimer();
+
+        try
+        {
+            // In-process: the kiosk IS the server, so there is no HTTP hop and no rate limiter
+            // in the way. The audience is written here and comes from nowhere else — a kiosk in
+            // a waiting room is the public, whoever is standing at it.
+            var reply = await AssistantSvc.AskAsync(_asked, KnowledgeAudience.Public, CancellationToken.None);
+            var guarded = false;
+
+            await foreach (var delta in reply.Deltas)
+            {
+                if (delta == AssistantService.GuardMarker)
+                {
+                    // Uncited answer: whatever is painted was never allowed to stand.
+                    guarded = true;
+                    _answer = AssistantService.RefusalText;
+                    _cites = [];
+                    continue;
+                }
+
+                if (delta == AssistantService.ResetMarker)
+                {
+                    // Tools are staff-only, so this cannot happen on this page — handled anyway,
+                    // because a marker painted as text would be worse than a blank screen.
+                    _answer = string.Empty;
+                    await InvokeAsync(StateHasChanged);
+                    continue;
+                }
+
+                _answer = (_answer ?? string.Empty) + delta;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            _answer ??= AssistantService.RefusalText;   // the model streamed nothing at all
+
+            if (!guarded)
+            {
+                _cites = Citations(reply.Chunks, _answer);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The kiosk assistant failed to answer");
+            _answer = "The assistant is not available right now — the front desk can help.";
+            _cites = [];
+        }
+        finally
+        {
+            _asking = false;
+            RestartAskTimer();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>
+    /// What to print under the answer. A refusal cites nothing. Otherwise the documents the
+    /// answer's "Sources:" line named — and if it named none the guard let through, the nearest
+    /// chunk it was given, because one honest line fits a kiosk where six would not.
+    /// <para>
+    /// The refusal test runs on the text the patient actually sees, Sources line removed: the
+    /// model does say "I don't know that; please ask reception." and then cite documents it did
+    /// not use, and "either a citation or the refusal, never both" (docs/private.md) means the
+    /// citation has to lose that argument.
+    /// </para>
+    /// </summary>
+    private static List<string> Citations(IReadOnlyList<RetrievedChunk> chunks, string answer)
+    {
+        if (chunks.Count == 0 || AssistantContract.IsRefusal(AssistantContract.WithoutSourcesLine(answer)))
+        {
+            return [];
+        }
+
+        var cited = AssistantService.CitedNumbers(answer)
+            .Where(n => n >= 1 && n <= chunks.Count)
+            .Select(n => chunks[n - 1].Label)
+            .Distinct()
+            .ToList();
+
+        return cited.Count > 0 ? cited : [chunks[0].Label];
+    }
+
+    private void ClearAsk()
+    {
+        _askResetCts?.Cancel();
+        _question = string.Empty;
+        _asked = string.Empty;
+        _answer = null;
+        _cites = [];
+    }
+
+    /// <summary>
+    /// The kiosk belongs to the next person in the queue. One minute after the last touch, the
+    /// question and its answer are gone — the same idea as the check-in screen's 8 seconds,
+    /// with longer on the clock because an answer is something you stand and read.
+    /// </summary>
+    private void RestartAskTimer()
+    {
+        _askResetCts?.Cancel();
+        _askResetCts = new CancellationTokenSource();
+        var token = _askResetCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(AskIdleReset, token);
+                ClearAsk();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (TaskCanceledException) { }
+        }, token);
+    }
+
+    public void Dispose()
+    {
+        _resetCts?.Cancel();
+        _askResetCts?.Cancel();
+    }
 }

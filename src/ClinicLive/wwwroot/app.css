@@ -368,6 +368,43 @@ main.page {
 .kiosk-position { font-size: 1.6rem; }
 .kiosk-position strong { font-size: 2.4rem; color: var(--primary); }
 
+/* ---------- kiosk: ask a question (season four, Part 9) ---------- */
+/* Same appliance rules as the check-in card above it: one column, giant type, targets a
+   fingertip finds without aiming. It is a second .kiosk block, so the panel keeps the card's
+   width and centring for free. */
+.kiosk-ask { margin-top: var(--s-5); }
+.kiosk-ask h2 { font-size: 1.9rem; margin-bottom: var(--s-2); }
+
+.kiosk-ask-input {
+    display: block; width: 100%; margin: var(--s-4) 0;
+    font-family: inherit; font-size: 1.5rem; text-align: center;
+    color: var(--ink); background: var(--surface);
+    border: 2px solid var(--line); border-radius: var(--radius-lg);
+    padding: var(--s-4) var(--s-3);
+}
+.kiosk-ask-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.kiosk-ask-input::placeholder { color: var(--muted); }
+
+.kiosk-ask-send, .kiosk-ask-again { width: 100%; font-size: 1.4rem; padding: 1rem; }
+.kiosk-ask-again { margin-top: var(--s-4); background: var(--surface); border: 2px solid var(--line); color: var(--ink); }
+
+.kiosk-asked { font-size: 1.2rem; color: var(--muted); font-style: italic; margin-bottom: var(--s-3); }
+
+.kiosk-answer {
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: var(--s-5); text-align: left;
+}
+.kiosk-answer-wait { font-size: 1.3rem; color: var(--muted); margin: 0; text-align: center; }
+/* The answer is the one thing a patient reads from a step back, so it is the biggest text on
+   the panel — and pre-wrap, because the model writes its own line breaks. */
+.kiosk-answer-text { font-size: 1.6rem; line-height: 1.45; margin: 0; white-space: pre-wrap; }
+
+.kiosk-cites { list-style: none; margin: var(--s-4) 0 0; padding: var(--s-3) 0 0; border-top: 1px solid var(--line); }
+.kiosk-cite { font-size: 1.05rem; color: var(--muted); }
+.kiosk-cite::before { content: "From: "; }
+
+.kiosk-ask-foot { margin-top: var(--s-4); margin-bottom: 0; font-size: 0.95rem; color: var(--muted); }
+
 /* ---------- staff surfaces (density with dignity) ---------- */
 .staff-head { display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4); }
 .staff-head h1 { margin: 0; }

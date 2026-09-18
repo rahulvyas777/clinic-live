@@ -2,6 +2,7 @@ using Microsoft.Playwright;
 
 // Screenshot harness for the ClinicLive redesign series.
 // Usage: dotnet run -- <outputDir> [baseUrl] [--checkin CODE] [--chat "message"] [--assistant "question"]
+//                                  [--kiosk-ask "question"] [--pocket [--pocket-ask "question"]]
 // Captures every surface at its natural device size; logs in for staff pages.
 
 var outDir = args.Length > 0 ? args[0] : "shots-out";
@@ -9,15 +10,64 @@ var baseUrl = args.Length > 1 && !args[1].StartsWith("--") ? args[1] : "http://l
 string? checkinCode = null;
 string? chatMessage = null;
 string? assistantQuestion = null;
+string? kioskQuestion = null;
+string? pocketQuestion = null;
 var callNext = args.Contains("--callnext");
 for (var i = 0; i < args.Length - 1; i++)
 {
     if (args[i] == "--checkin") checkinCode = args[i + 1];
     if (args[i] == "--chat") chatMessage = args[i + 1];
     if (args[i] == "--assistant") assistantQuestion = args[i + 1];
+    if (args[i] == "--kiosk-ask") kioskQuestion = args[i + 1];
+    if (args[i] == "--pocket-ask") pocketQuestion = args[i + 1];
 }
 
 Directory.CreateDirectory(outDir);
+
+// Season four: a local model has no "finished" event in the DOM, so the harness watches the
+// text instead — when the element's text has not changed for 1.5 s the stream has stopped.
+// A 14B model on a warm card takes 10–40 s to write an answer, so the ceiling is generous.
+static async Task<string> SettleAsync(IPage page, string selector, int ceilingMs = 90_000)
+{
+    var lastText = "";
+    var stableFor = 0;
+    for (var waited = 0; waited < ceilingMs; waited += 300)
+    {
+        await page.WaitForTimeoutAsync(300);
+        var element = await page.QuerySelectorAsync(selector);
+        var text = element is null ? "" : (await element.InnerTextAsync()).Trim();
+
+        if (text.Length > 0 && text == lastText)
+        {
+            stableFor += 300;
+            if (stableFor >= 1500) break;
+        }
+        else
+        {
+            stableFor = 0;
+            lastText = text;
+        }
+    }
+
+    return lastText;
+}
+
+// The whole point of a smoke run is reading what the model actually said, not a character count.
+static async Task ReportAsync(IPage page, string answer, string citeSelector)
+{
+    Console.WriteLine($"  answer ({answer.Length} chars):");
+    Console.WriteLine("  ---");
+    foreach (var line in answer.Replace("\r\n", "\n").Split('\n'))
+    {
+        Console.WriteLine("  " + line);
+    }
+
+    Console.WriteLine("  ---");
+    foreach (var cite in await page.QuerySelectorAllAsync(citeSelector))
+    {
+        Console.WriteLine("  cite: " + (await cite.InnerTextAsync()).Trim());
+    }
+}
 
 using var playwright = await Playwright.CreateAsync();
 await using var browser = await playwright.Chromium.LaunchAsync();
@@ -52,6 +102,48 @@ if (args.Contains("--pocket"))
     var wideFile = $"web-queue-desktop{(scheme == ColorScheme.Dark ? "-dark" : "")}.png";
     await wp.ScreenshotAsync(new() { Path = Path.Combine(outDir, wideFile) });
     Console.WriteLine($"  {wideFile}");
+
+    // Season four, Part 9: ask the clinic from the app. The web host calls the clinic's API
+    // server-to-server, so this is the real /api/pocket/assistant round trip — rate limiter,
+    // public documents and all — photographed on a phone.
+    if (pocketQuestion is not null)
+    {
+        Console.WriteLine($"asking from the app: {pocketQuestion}");
+        var askPage = await pocket.NewPageAsync();
+        await askPage.GotoAsync($"{baseUrl}/ask", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await askPage.WaitForTimeoutAsync(800);   // let the circuit connect before typing
+        await askPage.FillAsync(".ask-input", pocketQuestion);
+        await askPage.ClickAsync("button[type='submit']");
+
+        var answer = await SettleAsync(askPage, ".ask-answer");
+        await ReportAsync(askPage, answer, ".ask-cite");
+
+        await askPage.ScreenshotAsync(new() { Path = Path.Combine(outDir, "pocket-ask.png") });
+        Console.WriteLine("  pocket-ask.png");
+        await askPage.CloseAsync();
+    }
+
+    return;
+}
+
+// --kiosk-ask "question" — season four, Part 9. The kiosk's own panel, on the tablet it runs
+// on. No login and no HTTP hop: the page calls the assistant in-process, as the public.
+if (kioskQuestion is not null)
+{
+    var kioskCtx = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 768, Height = 1024 } });
+    var kp = await kioskCtx.NewPageAsync();
+    Console.WriteLine($"asking at the kiosk: {kioskQuestion}");
+    await kp.GotoAsync($"{baseUrl}/kiosk", new() { WaitUntil = WaitUntilState.NetworkIdle });
+    await kp.WaitForTimeoutAsync(800);   // let the circuit connect before typing
+    await kp.FillAsync(".kiosk-ask-input", kioskQuestion);
+    await kp.ClickAsync(".kiosk-ask-send");
+
+    var kioskAnswer = await SettleAsync(kp, ".kiosk-answer-text");
+    await ReportAsync(kp, kioskAnswer, ".kiosk-cite");
+
+    await kp.ScreenshotAsync(new() { Path = Path.Combine(outDir, "kiosk-ask.png") });
+    Console.WriteLine("  kiosk-ask.png");
+    await kp.CloseAsync();
     return;
 }
 

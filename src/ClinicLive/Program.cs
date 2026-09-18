@@ -84,6 +84,10 @@ builder.Services.AddScoped<ClinicLive.Services.Ai.KnowledgeIngester>();
 // Part 7: the search that grounds every answer. Scoped — it opens a short-lived DbContext.
 builder.Services.AddScoped<ClinicLive.Services.Ai.KnowledgeRetriever>();
 
+// Part 9: the patient assistant is the one endpoint here with no credential at all, and what
+// sits behind it is a graphics card. Ten questions a minute per address (PocketEndpoints).
+builder.Services.AddAssistantRateLimiter();
+
 // Push notifications (season three, Part 6). Configured = a Firebase service-account
 // file OUTSIDE the repo (user-secrets locally, server config in production).
 // Unconfigured = NullPushSender, which logs what it would have sent. Same app,
@@ -143,6 +147,10 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+
+// Part 9: the limiter has to sit in the pipeline before the endpoint it protects. Only the
+// endpoints that ask for a policy by name are limited; everything else passes straight through.
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
