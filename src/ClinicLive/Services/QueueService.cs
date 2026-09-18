@@ -12,6 +12,14 @@ public sealed record QueueSnapshot(QueueItem? NowServing, List<QueueItem> Waitin
 
 public sealed record CheckInResult(bool Success, string? Error = null, int Position = 0);
 
+/// <summary>
+/// One row of today's queue, already masked: the board's display name, the confirmation code,
+/// and the minutes waited. Season four, Part 8 — this is the shape the assistant's
+/// <c>get_queue</c> tool reports, and the masking happens here rather than there so that no
+/// caller can ever hand a model a full name by forgetting to.
+/// </summary>
+public sealed record QueueLine(string Name, string Code, int MinutesWaited, string Status);
+
 public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<QueueHub> hub, ClinicTime clinic, IPushSender push)
 {
     public async Task<CheckInResult> CheckInAsync(string confirmationCode)
@@ -75,6 +83,47 @@ public class QueueService(IDbContextFactory<ApplicationDbContext> dbFactory, IHu
             .ToList();
 
         return new QueueSnapshot(nowServing, waiting);
+    }
+
+    /// <summary>
+    /// Today's queue by status, longest wait first — the read behind the assistant's
+    /// <c>get_queue</c> tool (Part 8). <see cref="GetSnapshotAsync"/> answers "what is on the
+    /// board", which is only ever waiting + in progress; this answers "who has waited how long",
+    /// including the visits that are already done.
+    /// </summary>
+    /// <param name="status">"waiting", "called" or "done". Anything else reads as "waiting".</param>
+    /// <param name="ct">Cancelled when the caller's circuit goes away.</param>
+    public async Task<List<QueueLine>> GetLinesAsync(string status, CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        // "Today" is the clinic's day, not the server's — the same rule check-in follows.
+        var (dayStart, dayEnd) = clinic.DayBoundsUtc(clinic.Today);
+
+        var (wanted, label) = status switch
+        {
+            "called" => (AppointmentStatus.InProgress, "called"),
+            "done" => (AppointmentStatus.Done, "done"),
+            _ => (AppointmentStatus.CheckedIn, "waiting"),
+        };
+
+        var entries = await db.QueueEntries
+            .Include(q => q.Appointment).ThenInclude(a => a.Patient)
+            .Where(q => q.Appointment.Status == wanted
+                     && q.Appointment.StartsAt >= dayStart && q.Appointment.StartsAt < dayEnd)
+            .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+
+        return entries
+            .Select(q => new QueueLine(
+                ToItem(q).DisplayName,
+                q.Appointment.ConfirmationCode,
+                // Still waiting: up to now. Already called: up to the moment they were called.
+                Math.Max(0, (int)((q.CalledAt ?? now) - q.CheckedInAt).TotalMinutes),
+                label))
+            .OrderByDescending(l => l.MinutesWaited)
+            .ToList();
     }
 
     public async Task<bool> CallNextAsync()

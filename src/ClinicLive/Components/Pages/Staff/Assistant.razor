@@ -26,7 +26,7 @@
                         <span class="chat-cites">
                             @foreach (var cite in turn.Cites)
                             {
-                                <span class="chat-cite" title="@cite.Chunk.Preview">[@cite.Number] @cite.Chunk.Label</span>
+                                <span class="chat-cite" title="@cite.Tip">@cite.Text</span>
                             }
                         </span>
                     }
@@ -68,8 +68,14 @@
         public List<Citation> Cites { get; set; } = [];
     }
 
-    /// <summary>A retrieved chunk and the number the prompt gave it, so [2] means [2].</summary>
-    private sealed record Citation(int Number, RetrievedChunk Chunk);
+    /// <summary>
+    /// One line under the bubble. Usually a retrieved chunk with the number the prompt gave it,
+    /// so [2] means [2]; on a tool-backed answer (Part 8) it is the live queue, which has no
+    /// number because it is not a document.
+    /// </summary>
+    /// <param name="Text">What the reader sees: "[2] Fees and payment" or "live queue".</param>
+    /// <param name="Tip">The hover text — the chunk's opening words, or why there is no document.</param>
+    private sealed record Citation(string Text, string Tip);
 
     private async Task AskAsync()
     {
@@ -101,6 +107,15 @@
                     guarded = true;
                     answer.Text = AssistantService.RefusalText;
                     answer.Cites = [];
+                    continue;
+                }
+
+                if (delta == AssistantService.ResetMarker)
+                {
+                    // The model called a tool. Whatever it said on the way there was thinking
+                    // out loud, not an answer — clear the bubble and let the real one land.
+                    answer.Text = string.Empty;
+                    await InvokeAsync(StateHasChanged);
                     continue;
                 }
 
@@ -143,25 +158,37 @@
     }
 
     /// <summary>
-    /// Which documents to print under the bubble: the ones the answer's "Sources:" line names.
-    /// A refusal cites nothing. An answer that cited no usable number still stands on the
-    /// chunks it was given — the guard let it through — so those are shown instead.
+    /// What to print under the bubble: the documents the answer's "Sources:" line names.
+    /// A refusal cites nothing. An answer that said "Sources: [queue]" was answered from the
+    /// live queue through get_queue (Part 8), and says so instead of naming a document. An
+    /// answer that cited no usable number still stands on the chunks it was given — the guard
+    /// let it through — so those are shown instead.
     /// </summary>
     private static List<Citation> Citations(IReadOnlyList<RetrievedChunk> chunks, string answer)
     {
-        if (chunks.Count == 0 || AssistantService.IsRefusal(answer))
+        if (AssistantService.IsRefusal(answer))
+        {
+            return [];
+        }
+
+        if (AssistantService.CitesQueue(answer))
+        {
+            return [new Citation("live queue", "Answered from the clinic's queue as it was at that moment, not from a document.")];
+        }
+
+        if (chunks.Count == 0)
         {
             return [];
         }
 
         var cited = AssistantService.CitedNumbers(answer)
             .Where(n => n >= 1 && n <= chunks.Count)
-            .Select(n => new Citation(n, chunks[n - 1]))
+            .Select(n => new Citation($"[{n}] {chunks[n - 1].Label}", chunks[n - 1].Preview))
             .ToList();
 
         return cited.Count > 0
             ? cited
-            : chunks.Select((c, i) => new Citation(i + 1, c)).ToList();
+            : chunks.Select((c, i) => new Citation($"[{i + 1}] {c.Label}", c.Preview)).ToList();
     }
 
     private Task OnKeyDown(KeyboardEventArgs e) =>

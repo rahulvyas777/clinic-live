@@ -143,6 +143,11 @@ public class RetrievalTests(PostgresFixture fx) : IAsyncLifetime
     private AssistantService NewService(FakeChatClient chat) =>
         new(chat,
             NewRetriever(),
+            // Part 8: the assistant is handed the queue tool, but nothing here is a queue
+            // question, so the classifier never offers it and this instance is never used.
+            new AssistantTools(
+                new ClinicLive.Services.QueueService(fx.DbFactory, new FakeQueueHub(), fx.ClinicTime, new FakePushSender()),
+                NullLogger<AssistantTools>.Instance),
             Options,
             new ConfigurationBuilder().Build(),
             NullLogger<AssistantService>.Instance);

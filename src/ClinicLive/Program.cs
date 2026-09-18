@@ -5,6 +5,9 @@ using ClinicLive.Api;
 using ClinicLive.Components;
 using ClinicLive.Components.Account;
 using ClinicLive.Data;
+// Part 8: UseFunctionInvocation is an extension method, so the namespace has to be imported —
+// naming the builder's type in full is not enough.
+using Microsoft.Extensions.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,9 +62,19 @@ builder.Services.AddSignalR();
 // shared by every circuit (singleton); the service that wraps it is per-circuit.
 var ai = ClinicLive.Services.Ai.AiOptions.FromConfiguration(builder.Configuration);
 builder.Services.AddSingleton(ai);
-builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(
-    new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.ChatModel));
+// Part 8: the raw Ollama client returns a tool CALL; this wrapper is what runs the function and
+// feeds its result back as another turn, until the model has a real answer. It can only ever
+// invoke what the request carried in ChatOptions.Tools — and most requests carry none.
+builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(sp =>
+    new Microsoft.Extensions.AI.ChatClientBuilder(
+            new OllamaSharp.OllamaApiClient(new Uri(ai.Endpoint), ai.ChatModel))
+        .UseFunctionInvocation()
+        .Build(sp));
 builder.Services.AddScoped<ClinicLive.Services.Ai.AssistantService>();
+
+// The tool itself is scoped: it reads through the scoped QueueService, and the AIFunction the
+// model is offered is built per circuit from that instance.
+builder.Services.AddScoped<ClinicLive.Services.Ai.AssistantTools>();
 
 // Part 6: the same Ollama box, a different model — embeddings, 768 dimensions.
 builder.Services.AddSingleton<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>(
