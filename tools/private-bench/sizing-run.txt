@@ -1,0 +1,15 @@
+CPU qwen2.5:14b 4 threads: prompt 643 tok read at 19.2 tok/s -> first word after 33.5 s; generation 4.7 tok/s; total 53.7 s
+CPU qwen2.5:14b 8 threads: prompt 647 tok read at 30.5 tok/s -> first word after 21.2 s; generation 6.1 tok/s; total 39.8 s
+CPU llama3.1:8b 4 threads: prompt 572 tok read at 34.8 tok/s -> first word after 16.5 s; generation 8.9 tok/s; total 24.2 s
+CPU llama3.1:8b 8 threads: prompt 568 tok read at 58.2 tok/s -> first word after 9.8 s; generation 11.6 tok/s; total 15.9 s
+CPU qwen2.5:3b 4 threads: prompt 645 tok read at 86.9 tok/s -> first word after 7.4 s; generation 20.3 tok/s; total 10.1 s
+CPU qwen2.5:3b 8 threads: prompt 641 tok read at 143.5 tok/s -> first word after 4.5 s; generation 26.1 tok/s; total 9.1 s
+GPU qwen2.5:14b x1: 39.1 tok/s aggregate, 45.9 tok/s each, slowest waited 3.1 s, power mean 158.9 W max 160.1 W
+GPU qwen2.5:14b x2: 64.3 tok/s aggregate, 41.6 tok/s each, slowest waited 3.7 s, power mean 153.2 W max 162.7 W
+GPU qwen2.5:14b x4: 81.8 tok/s aggregate, 28.5 tok/s each, slowest waited 5.5 s, power mean 154.6 W max 160.1 W
+GPU qwen2.5:14b x8: 77.8 tok/s aggregate, 25.9 tok/s each, slowest waited 11.3 s, power mean 156.0 W max 160.3 W
+GPU llama3.1:8b x1: 66.3 tok/s aggregate, 84.2 tok/s each, slowest waited 1.0 s, power mean 137.6 W max 157.2 W
+GPU llama3.1:8b x2: 101.8 tok/s aggregate, 74.8 tok/s each, slowest waited 1.3 s, power mean 156.4 W max 158.8 W
+GPU llama3.1:8b x4: 124.5 tok/s aggregate, 51.1 tok/s each, slowest waited 2.3 s, power mean 142.1 W max 155.0 W
+GPU llama3.1:8b x8: 123.2 tok/s aggregate, 47.0 tok/s each, slowest waited 4.6 s, power mean 149.6 W max 160.7 W
+idle power 34.6 W; saved sizing-results.json
